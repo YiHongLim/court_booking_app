@@ -22,7 +22,6 @@ const BookingPage = () => {
         const response = await fetch(`https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev/users/${currentUser?.uid}/bookings`);
         if (response.ok) {
             const data = await response.json();
-            console.log(data);
             setBookings(data);
         } else {
             console.error("Failed to fetch bookings");
@@ -30,15 +29,15 @@ const BookingPage = () => {
     }, [currentUser]); // Dependencies array, the function will only change if currentUser changes
 
     const handleUpdateBooking = async (bookingId, newStart, newEnd) => {
+
         const apiUrl = `https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev/bookings/${bookingId}`;
         const bookingDetails = {
+            firebaseUid: currentUser?.uid, // Use the UID from the currentUser object
             startTime: newStart.toISOString(),
             endTime: newEnd.toISOString(),
         };
 
-
-        console.log(bookingDetails.endTime);
-
+        console.log(bookingDetails);
         try {
             const response = await fetch(apiUrl, {
                 method: 'PUT',
@@ -64,6 +63,33 @@ const BookingPage = () => {
         }
     };
 
+    const handleDeleteBooking = async (bookingId) => {
+        const confirmDelete = window.confirm('Are you sure you want to delete this booking?');
+        if (!confirmDelete) return;
+
+        const apiUrl = `https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev/bookings/${bookingId}`;
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Include your authentication headers here
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete booking');
+            }
+
+            // Refresh bookings list after successful deletion
+            await fetchBookings();
+        } catch (error) {
+            console.error('Error deleting booking:', error);
+            alert("Failed to delete the booking. Please try again.");
+        }
+    };
+
     useEffect(() => {
         fetchBookings();
     }, [fetchBookings]);
@@ -83,6 +109,7 @@ const BookingPage = () => {
                                     End Time: {format(new Date(booking.end_time), 'PPPpp')}
                                 </Card.Text>
                                 <Button variant="outline-primary" onClick={() => handleEdit(booking)}>Edit</Button>
+                                <Button variant="outline-danger" onClick={() => handleDeleteBooking(booking.id)} style={{ marginLeft: '10px' }}>Delete</Button>
 
                             </Card.Body>
                         </Card>
