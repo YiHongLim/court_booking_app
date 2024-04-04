@@ -3,8 +3,8 @@ import AuthPage from "./pages/AuthPage"
 import BookingPage from "./pages/BookingPage"
 import { AuthProvider } from "./context/AuthContext"
 import CourtsPage from "./pages/CourtsPage"
-import CourtDetailsPage from "./pages/CourtDetailsPage"
 import NavigationBar from "./components/NavigationBar"
+import CourtDetailsPage from "./pages/DetailsPage"
 
 
 function App() {

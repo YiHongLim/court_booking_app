@@ -26,7 +26,7 @@ const NavigationBar = ({ cartItemCount }) => {
     return (
         <Navbar bg="light" expand="lg">
             <Container>
-                <Navbar.Brand onClick={() => navigate('/')}>Court Booking App</Navbar.Brand>
+                <Navbar.Brand onClick={() => navigate('/courts')}>Court Booking App</Navbar.Brand>
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
                 <Navbar.Collapse id="basic-navbar-nav">
                     <Nav className="me-auto">

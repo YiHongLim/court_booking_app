@@ -11,7 +11,7 @@ const CourtCard = ({ court }) => {
 
     return (
         <Card style={{ width: '18rem', margin: '10px' }}>
-            <Card.Img variant="top" src={court.imageUrl} alt={`Image of ${court.name}`} />
+            <Card.Img variant="top" src={court.image_url} alt={`Image of ${court.name}`} />
             <Card.Body>
                 <Card.Title>{court.name}</Card.Title>
                 <Card.Text>

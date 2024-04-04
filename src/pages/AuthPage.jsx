@@ -15,15 +15,45 @@ const AuthPage = () => {
     const [showResetModal, setShowResetModal] = useState(false);
     const navigate = useNavigate();
 
+    // This function would be called after successful authentication with Firebase
+    function sendTokenToServer(idToken) {
+        fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ idToken })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server error during login');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Login successful, received data:', data);
+                // Proceed with logged-in user experience
+            })
+            .catch(error => {
+                console.error('Error during login:', error);
+            });
+    }
+
     const handleAuthAction = async (isSignUp) => {
         setError(""); // Reset error messages before attempting
         try {
+            let userCredential;
             if (isSignUp) {
-                await createUserWithEmailAndPassword(auth, email, password);
+                userCredential = await createUserWithEmailAndPassword(auth, email, password);
             } else {
-                await signInWithEmailAndPassword(auth, email, password);
+                userCredential = await signInWithEmailAndPassword(auth, email, password);
             }
-            navigate("/booking"); // Redirect to booking page upon successful authentication
+
+            // Send ID token to server
+            const idToken = await userCredential.user.getIdToken();
+            await sendTokenToServer(idToken);
+
+            navigate("/courts"); // Redirect to booking page upon successful authentication
         } catch (error) {
             setError(error.message); // Set error message to display to the user
         }
@@ -33,15 +63,19 @@ const AuthPage = () => {
         const provider = new GoogleAuthProvider();
         try {
             const result = await signInWithPopup(auth, provider);
-            // This gives you a Google Access Token. You can use it to access the Google API.
-            console.log(result.user);
-            // Redirect the user after successful sign in
-            navigate("/booking");
+
+            // Send ID token to server
+            const idToken = await result.user.getIdToken();
+            await sendTokenToServer(idToken);
+
+            navigate("/courts"); // Redirect the user after successful sign in
         } catch (error) {
-            console.error(error);
+            setError(error.message);
             // Handle errors here, such as displaying a notification to the user
         }
     };
+
+
 
     return (
         <div className="auth-page" style={{ backgroundImage: "url('https://sportsvenuecalculator.com/wp-content/uploads/2022/06/2-1.jpg')" }}>
