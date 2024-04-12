@@ -13,12 +13,25 @@ export const fetchCourts = createAsyncThunk(
 
 const courtSlice = createSlice({
     name: "courts",
-    initialState: [],
+    initialState: {
+        data: [],
+        isLoading: false,
+        error: null
+    },
     reducers: {},
     extraReducers: (builder) => {
-        builder.addCase(fetchCourts.fulfilled, (state, action) => {
-            return action.payload;
-        })
+        builder
+            .addCase(fetchCourts.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(fetchCourts.fulfilled, (state, action) => {
+                state.data = action.payload;
+                state.isLoading = false;
+            })
+            .addCase(fetchCourts.rejected, (state, action) => {
+                state.error = action.error.message;
+                state.isLoading = false;
+            })
     }
 })
 

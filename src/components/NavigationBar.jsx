@@ -9,9 +9,9 @@ import GoogleButton from 'react-google-button';
 
 
 const NavigationBar = ({ cartItemCount }) => {
-    const auth = getAuth();
     const navigate = useNavigate();
     const { currentUser } = useContext(AuthContext);
+    // const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -27,16 +27,35 @@ const NavigationBar = ({ cartItemCount }) => {
         setShowLoginModal(false)
     }
 
-    const handleAuthAction = async (isSignUp) => {
+    const handleSignUp = async (e) => {
+        e.preventDefault();
         setError("");
         try {
-            if (isSignUp) {
-                await createUserWithEmailAndPassword(auth, email, password);
-            } else {
-                await signInWithEmailAndPassword(auth, email, password);
-            }
+            const res = await createUserWithEmailAndPassword(
+                auth,
+                // TODO: Save the name to the user's profile or in your database
+                email,
+                password
+            );
+            console.log(res.user);
             handleCloseModal();
-            navigate("/");
+            navigate("/"); // Navigate to a more appropriate route if needed
+        } catch (error) {
+            setError(error.message);
+        }
+    };
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setError("");
+        try {
+            const res = await signInWithEmailAndPassword(
+                auth,
+                email,
+                password
+            );
+            console.log(res.user);
+            handleCloseModal();
+            navigate("/"); // Navigate to a more appropriate route if needed
         } catch (error) {
             setError(error.message);
         }
@@ -99,15 +118,23 @@ const NavigationBar = ({ cartItemCount }) => {
                     <Modal.Title>{showSignUpModal ? "Sign Up" : "Log In"}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <Form>
-                        {showSignUpModal && (
+                    <Form
+                        className="d-grid gap-2 px-5"
+                        onSubmit={showSignUpModal ? handleSignUp : handleLogin}
+                    >
+                        {/* {showSignUpModal && (
                             <>
                                 <Form.Group className="mb-3" controlId='name'>
                                     <Form.Label>Name</Form.Label>
-                                    <Form.Control type="text" placeholder='Enter name'></Form.Control>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder='Enter name'
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                    ></Form.Control>
                                 </Form.Group>
                             </>
-                        )}
+                        )} */}
                         <Form.Group className="mb-3" controlId='formBasicEmail'>
                             <Form.Label>Email address</Form.Label>
                             <Form.Control
@@ -128,10 +155,7 @@ const NavigationBar = ({ cartItemCount }) => {
                             />
                         </Form.Group>
                         {error && <Alert variant="danger">{error}</Alert>}
-                        <Button variant="primary" type="submit" onClick={(e) => {
-                            e.preventDefault();
-                            handleAuthAction(showSignUpModal);
-                        }}>
+                        <Button variant="primary" type="submit">
                             {showSignUpModal ? "Sign Up" : "Log In"}
                         </Button>
                         <GoogleButton

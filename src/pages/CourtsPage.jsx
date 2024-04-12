@@ -1,6 +1,5 @@
-// src/pages/BookingPage.jsx
 import { useEffect, useContext } from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import CourtCard from "../components/CourtCard";
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +9,7 @@ import { fetchCourts } from '../features/courts/courtSlice';
 const CourtsPage = () => {
     // const [courts, setCourts] = useState([]);
     const dispatch = useDispatch();
-    const courts = useSelector((state) => state.courts);
+    const { data: courts, isLoading } = useSelector((state) => state.courts);
     const { currentUser } = useContext(AuthContext); // Use the Auth context to access the current user
     const navigate = useNavigate();
 
@@ -21,13 +20,23 @@ const CourtsPage = () => {
     return (
         <Container>
             <h1 className="my-4">Courts</h1>
-            <Row>
-                {courts.map(court => (
-                    <Col key={court.id} sm={12} md={6} lg={4}>
-                        <CourtCard court={court} />
-                    </Col>
-                ))}
-            </Row>
+            {isLoading ? (
+                <div className='text-center'>
+                    <Spinner animation="border" role="status">
+                        <span className='visually-hidden'>Loading...</span>
+                    </Spinner>
+                </div>
+            )
+                : (
+                    <Row>
+                        {courts.map(court => (
+                            <Col key={court.id} sm={12} md={6} lg={4}>
+                                <CourtCard court={court} />
+                            </Col>
+                        ))}
+                    </Row>
+                )
+            }
         </Container>
     );
 };
