@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
-import { GoogleAuthProvider, createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
+import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 import { useContext, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { auth } from '../firebase';
@@ -48,18 +48,41 @@ const NavigationBar = ({ cartItemCount }) => {
         e.preventDefault();
         setError("");
         try {
-            const res = await signInWithEmailAndPassword(
-                auth,
-                email,
-                password
-            );
+            const res = await signInWithEmailAndPassword(auth, email, password);
             console.log(res.user);
             handleCloseModal();
+
+            // After successful sign-up or login
+            const user = res.user; // The user object from Firebase
+            await storeUserInDatabase({
+                firebaseUid: user.uid,
+                name: "Dummy",
+                email: user.email,
+                // You can also pass displayName or photoURL if you have them
+            });
+
             navigate("/"); // Navigate to a more appropriate route if needed
         } catch (error) {
             setError(error.message);
         }
     };
+
+    const storeUserInDatabase = async (userData) => {
+        const response = await fetch('https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev/users', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userData),
+        });
+
+        if (!response.ok) {
+            // Handle the error
+            console.error('Error storing user data');
+        }
+    };
+
+
 
     const handleGoogleSignIn = async () => {
         const provider = new GoogleAuthProvider();

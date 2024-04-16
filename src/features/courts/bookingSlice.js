@@ -1,6 +1,9 @@
 // Importing necessary utilities from Redux Toolkit and Redux Thunk for asynchronous actions
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios'; // Using axios for HTTP requests
+// import { storage } from '../../firebase';
+// import { ref, uploadBytes, getDownloadURL  } from 'firebase/storage';
+
 
 const BASE_URL = "https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev";
 // Async thunk for fetching bookings for a specific user
