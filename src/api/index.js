@@ -1,12 +1,14 @@
-let express = require('express');
-const cors = require('cors');
-const { Pool } = require('pg');
+import express, { json } from 'express';
+import cors from 'cors';
+import { Pool } from 'pg';
+import { config as configDotenv } from 'dotenv';
+import dotenv from 'dotenv';
+dotenv.config();
 const { DATABASE_URL } = process.env;
-require('dotenv').config();
 
-let app = express();
+const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(json());
 
 const pool = new Pool({
     connectionString: DATABASE_URL,
@@ -14,6 +16,80 @@ const pool = new Pool({
         rejectUnauthorized: false,
     },
 });
+
+// POST endpoint to add a new user or update an existing user
+app.post('/users', async (req, res) => {
+    const { firebaseUid, name, email } = req.body;
+
+    try {
+        // Start a transaction
+        await pool.query('BEGIN');
+
+        // Check if the user already exists
+        const existingUser = await pool.query('SELECT * FROM users WHERE firebase_uid = $1', [firebaseUid]);
+
+        let user;
+        if (existingUser.rows.length === 0) {
+            // User does not exist, create a new user record
+            const newUser = await pool.query(
+                'INSERT INTO users (firebase_uid, name, email, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
+                [firebaseUid, name, email]
+            );
+            user = newUser.rows[0];
+        } else {
+            // User exists, optionally update the last login timestamp or other info
+            // Update any other user information here as needed
+            const updatedUser = await pool.query(
+                'UPDATE users SET name = $2, email = $3 WHERE firebase_uid = $1 RETURNING *',
+                [firebaseUid, name, email]
+            );
+            user = updatedUser.rows[0];
+        }
+
+        // Commit the transaction
+        await pool.query('COMMIT');
+
+        res.json(user);
+    } catch (error) {
+        // Rollback the transaction in case of an error
+        await pool.query('ROLLBACK');
+        console.error('Error in /users route:', error);
+        res.status(500).json({ error: "Something went wrong, please try again later." });
+    }
+});
+
+// get user profile
+app.get('/users/:userId', async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
+        if (result.rows.length > 0) {
+            res.json(result.rows[0]);
+        } else {
+            res.status(404).json({ error: "User not found" });
+        }
+    } catch (error) {
+        console.error('Error retrieving user profile:', error);
+        res.status(500).send('Failed to retrieve user profile');
+    }
+});
+
+// update user profile
+app.put('/users/:userId', async (req, res) => {
+    const { userId } = req.params;
+    const { username, email, profile_picture_url } = req.body;
+    try {
+        const result = await pool.query(
+            'UPDATE users SET username = $1, email = $2,  profile_picture_url = $3 WHERE user_id = $4 RETURNING *',
+            [username, email, profile_picture_url, userId]
+        );
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error updating user profile:', error);
+        res.status(500).send('Failed to update user profile');
+    }
+});
+
 
 async function getPostgresVersion() {
     const client = await pool.connect();
@@ -27,6 +103,7 @@ async function getPostgresVersion() {
 
 getPostgresVersion();
 
+// add courts, not implemented in FE
 app.post('/courts', async (req, res) => {
     const { name, location, description } = req.body;
     const client = await pool.connect();
@@ -44,6 +121,7 @@ app.post('/courts', async (req, res) => {
     }
 });
 
+// get courts, implemented in FE
 app.get('/courts', async (req, res) => {
     const client = await pool.connect();
     try {
@@ -57,24 +135,38 @@ app.get('/courts', async (req, res) => {
     }
 });
 
-// app.get('/courts/:id', async (req, res) => {
-//   const { id } = req.params;
-//   const client = await pool.connect();
-//   try {
-//     const court = await client.query('SELECT * FROM courts WHERE id = $1', [id]);
-//     if (court.rows.length > 0) {
-//       res.json(court.rows[0]);
-//     } else {
-//       res.status(404).json({ error: "Court not found" });
-//     }
-//   } catch (err) {
-//     console.error(err.stack);
-//     res.status(500).json({ error: "Something went wrong, please try again later!" });
-//   } finally {
-//     client.release();
-//   }
-// });
+// get images by court
+app.get('/courts/:id', async (req, res) => {
+    const { id } = req.params;
+    const client = await pool.connect();
+    try {
+        const query = `
+      SELECT c.*, array_agg(i.image_url) AS images
+      FROM courts c
+      LEFT JOIN images i ON c.id = i.court_id
+      WHERE c.id = $1
+      GROUP BY c.id;
+    `;
+        const courtDetails = await client.query(query, [id]);
+        client.release();
 
+        if (courtDetails.rows.length > 0) {
+            const court = courtDetails.rows[0];
+            // Assuming images are returned as a PostgreSQL array string; parsing might not be needed if your setup automatically handles it
+            court.images = court.images ? court.images : [];
+            res.json(court);
+        } else {
+            res.status(404).json({ error: "Court not found" });
+        }
+    } catch (err) {
+        console.error(err.stack);
+        client.release(); // Ensure the client is released in case of errors too
+        res.status(500).json({ error: "Something went wrong, please try again later!" });
+    }
+});
+
+
+// update courts, not implemented in FE
 app.put('/courts/:id', async (req, res) => {
     const { id } = req.params;
     const { name, location, description } = req.body;
@@ -97,6 +189,7 @@ app.put('/courts/:id', async (req, res) => {
     }
 });
 
+// delete courts, not implemented 
 app.delete('/courts/:id', async (req, res) => {
     const { id } = req.params;
     const client = await pool.connect();
@@ -115,6 +208,7 @@ app.delete('/courts/:id', async (req, res) => {
     }
 });
 
+// add bookings
 app.post('/bookings', async (req, res) => {
     const { courtId, firebaseUid, startTime, endTime } = req.body;
 
@@ -138,7 +232,6 @@ app.post('/bookings', async (req, res) => {
     }
 });
 
-
 app.get('/users/:firebaseUid/bookings', async (req, res) => {
     const { firebaseUid } = req.params;
 
@@ -150,6 +243,7 @@ app.get('/users/:firebaseUid/bookings', async (req, res) => {
         }
         const userId = userRes.rows[0].id;
 
+        console.log(userId);
         // Then, retrieve all bookings for that user ID
         const bookingsRes = await pool.query(`
       SELECT b.*, c.name as court_name, c.location as court_location
@@ -165,24 +259,11 @@ app.get('/users/:firebaseUid/bookings', async (req, res) => {
     }
 });
 
-// Utility function to get user ID from Firebase UID
-const getUserIdFromFirebaseUid = async (firebaseUid) => {
-    try {
-        const userRes = await pool.query('SELECT id FROM users WHERE firebase_uid = $1', [firebaseUid]);
-        if (userRes.rows.length === 0) {
-            throw new Error('User not found');
-        }
-        return userRes.rows[0].id; // Returns the user ID
-    } catch (error) {
-        throw error; // You could handle the error differently depending on your needs
-    }
-};
-
 // update booking
 app.put('/bookings/:bookingId', async (req, res) => {
     const { bookingId } = req.params;
     const { firebaseUid, startTime, endTime } = req.body;
-    console.log(bookingId);
+
     try {
         const userRes = await pool.query('SELECT id FROM users WHERE firebase_uid = $1', [firebaseUid]);
         if (userRes.rows.length === 0) {
@@ -199,7 +280,6 @@ app.put('/bookings/:bookingId', async (req, res) => {
             [startTime, endTime, bookingId, userId]
         );
 
-        console.log(updateRes.userId)
         if (updateRes.rowCount === 0) {
             // No booking was updated, could mean it doesn't exist or the user isn't authorized to update it
             return res.status(404).json({ error: "Booking not found or not authorized" });
@@ -225,37 +305,6 @@ app.delete('/bookings/:bookingId', async (req, res) => {
     }
 });
 
-// get images by court
-app.get('/courts/:id', async (req, res) => {
-    const { id } = req.params;
-    const client = await pool.connect();
-    try {
-        const query = `
-      SELECT c.*, array_agg(i.image_url) AS images
-      FROM courts c
-      LEFT JOIN images i ON c.id = i.court_id
-      WHERE c.id = $1
-      GROUP BY c.id;
-    `;
-        const courtDetails = await client.query(query, [id]);
-        client.release(); // It's good practice to release the client before sending the response
-
-        if (courtDetails.rows.length > 0) {
-            const court = courtDetails.rows[0];
-            // Assuming images are returned as a PostgreSQL array string; parsing might not be needed if your setup automatically handles it
-            court.images = court.images ? court.images : [];
-            res.json(court);
-        } else {
-            res.status(404).json({ error: "Court not found" });
-        }
-    } catch (err) {
-        console.error(err.stack);
-        client.release(); // Ensure the client is released in case of errors too
-        res.status(500).json({ error: "Something went wrong, please try again later!" });
-    }
-});
-
-
 // Endpoint to add an image to a court
 app.post('/courts/:courtId/images', async (req, res) => {
     const { courtId } = req.params;
@@ -274,6 +323,22 @@ app.post('/courts/:courtId/images', async (req, res) => {
         client.release();
     }
 });
+
+app.get('/courts/:courtId/images', async (req, res) => {
+    const { courtId } = req.params;
+    const client = await pool.connect();
+    try {
+        const query = 'SELECT * FROM images WHERE court_id = $1';
+        const images = await client.query(query, [courtId]);
+        res.json(images.rows);
+    } catch (err) {
+        console.error(err.stack);
+        res.status(500).json({ error: "Failed to fetch images" });
+    } finally {
+        client.release();
+    }
+});
+
 
 
 // Assuming each image has a unique ID and you want to allow updating the image URL

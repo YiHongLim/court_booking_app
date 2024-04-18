@@ -5,7 +5,6 @@ import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchCourts } from '../features/courts/courtSlice';
-import CourtImageManager from '../components/CourtImageManager';
 
 
 const CourtsPage = () => {
@@ -34,15 +33,12 @@ const CourtsPage = () => {
                         {courts.map(court => (
                             <Col key={court.id} sm={12} md={6} lg={4}>
                                 <CourtCard court={court} />
-                                <CourtImageManager courtId={court.id} />
-
                             </Col>
                         ))}
                     </Row>
                 )
             }
         </Container>
-
     );
 };
 
