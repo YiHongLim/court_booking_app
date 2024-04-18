@@ -5,7 +5,7 @@ import axios from 'axios'; // Using axios for HTTP requests
 // import { ref, uploadBytes, getDownloadURL  } from 'firebase/storage';
 
 
-const BASE_URL = "https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev";
+const BASE_URL = import.meta.env.VITE_API_URL;
 // Async thunk for fetching bookings for a specific user
 export const fetchBookings = createAsyncThunk(
     'bookings/fetchBookings',

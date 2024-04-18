@@ -7,7 +7,7 @@ import pkg from 'pg';
 // Destructure the required parts from the module object
 const { Pool } = pkg;
 
-const { DATABASE_URL } = process.env;
+const { DATABASE_URL } = import.meta.env.DATABASE_URL;
 
 const app = express();
 app.use(cors());
