@@ -1,3 +1,84 @@
+// import { useNavigate } from 'react-router-dom';
+// import { Navbar, Nav, Container, Badge, Button } from 'react-bootstrap';
+// import { useContext, useState } from 'react';
+// import { AuthContext } from '../context/AuthContext';
+// import AuthModal from './AuthModal';
+// import { logoutUser } from './AuthService';
+// // Import any other necessary components
+
+// const NavigationBar = ({ cartItemCount }) => {
+//     const navigate = useNavigate();
+//     const { currentUser } = useContext(AuthContext);
+//     const [showAuthModal, setShowAuthModal] = useState(false);
+//     const [isSignUp, setIsSignUp] = useState(true); // To toggle between sign up and login in the modal
+
+//     // Other state and functions related to navigation bar display
+
+//     const handleAuthModalClose = () => {
+//         setShowAuthModal(false);
+//     };
+
+//     const handleOpenSignUpModal = () => {
+//         setIsSignUp(true);
+//         setShowAuthModal(true);
+//     };
+
+//     const handleOpenLoginModal = () => {
+//         setIsSignUp(false);
+//         setShowAuthModal(true);
+//     };
+
+//     return (
+//         <>
+//             <Navbar bg="dark" expand="lg" data-bs-theme="dark">
+//                 <Container>
+//                     <Navbar.Brand href="/">Court Booking</Navbar.Brand>
+//                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
+//                     <Navbar.Collapse id="basic-navbar-nav">
+//                         <Nav className="me-auto">
+//                             <Nav.Link onClick={() => navigate('/courts')}>Courts</Nav.Link>
+//                         </Nav>
+//                         <Nav >
+//                             {!currentUser && (
+//                                 <>
+//                                     <Nav.Link onClick={handleOpenLoginModal}>
+//                                         <Button variant="outline-primary">Log In</Button>
+//                                     </Nav.Link>
+//                                     <Nav.Link onClick={handleOpenSignUpModal}>
+//                                         <Button variant="outline-secondary">Sign Up</Button>
+//                                     </Nav.Link>
+//                                 </>
+//                             )}
+//                             {currentUser && (
+//                                 <>
+//                                     <Button variant="outline-success" onClick={() => navigate('/booking')}>
+//                                         Cart <Badge bg="secondary">{cartItemCount}</Badge>
+//                                         <span className="visually-hidden">booking items</span>
+//                                     </Button>
+//                                     <Button variant="outline-danger" onClick={logoutUser} style={{ marginLeft: '10px' }}>
+//                                         Logout
+//                                     </Button>
+//                                 </>
+//                             )}
+//                         </Nav>
+//                     </Navbar.Collapse>
+//                 </Container>
+//             </Navbar >
+
+//             <AuthModal
+//                 showSignUp={isSignUp}
+//                 showLogin={!isSignUp}
+//                 handleClose={handleAuthModalClose}
+//             />
+//         </>
+//     );
+// };
+
+// export default NavigationBar;
+
+
+
+
 import { useNavigate } from 'react-router-dom';
 import { Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
 import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
@@ -41,8 +122,10 @@ const NavigationBar = ({ cartItemCount }) => {
             handleCloseModal();
             navigate("/"); // Navigate to a more appropriate route if needed
         } catch (error) {
-            setError(error.message);
+            const friendlyMessage = getFriendlyErrorMessage(error);
+            setError(friendlyMessage);
         }
+
     };
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -63,37 +146,79 @@ const NavigationBar = ({ cartItemCount }) => {
 
             navigate("/"); // Navigate to a more appropriate route if needed
         } catch (error) {
-            setError(error.message);
+            const friendlyMessage = getFriendlyErrorMessage(error);
+            setError(friendlyMessage);
+        }
+
+    };
+
+    // Utility function to convert Firebase error code to user-friendly message
+    const getFriendlyErrorMessage = (error) => {
+        switch (error.code) {
+            case 'auth/email-already-in-use':
+                return 'This email is already in use. Please use a different email.';
+            case 'auth/invalid-email':
+                return 'Invalid email address. Please check your email.';
+            case 'auth/weak-password':
+                return 'Password is too weak. Please use a stronger password.';
+            case 'auth/user-not-found':
+                return 'No user found with this email. Please sign up.';
+            case 'auth/wrong-password':
+                return 'Incorrect password. Please try again.';
+            case 'auth/missing-password':
+                return 'Please enter your password.';
+            default:
+                return 'An unexpected error occurred. Please try again.';
         }
     };
 
     const storeUserInDatabase = async (userData) => {
-        const response = await fetch('https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev/users', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(userData),
-        });
+        try {
+            const response = await fetch('https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData),
+            });
 
-        if (!response.ok) {
-            // Handle the error
-            console.error('Error storing user data');
+            if (!response.ok) {
+                // Handle the error
+                const errorText = await response.text();
+                console.error('Error storing user data:', errorText);
+                setError('There was a problem storing user data. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error storing user data:', error);
+            setError('Failed to connect to the database. Please check your connection.');
         }
     };
-
-
 
     const handleGoogleSignIn = async () => {
         const provider = new GoogleAuthProvider();
         try {
-            await signInWithPopup(auth, provider);
+            const res = await signInWithPopup(auth, provider);
+
+            // User data from Firebase
+            const userData = {
+                firebaseUid: res.user.uid,
+                name: res.user.displayName, // Name from Google account
+                email: res.user.email,
+                // You can add more details here if required
+            };
+
+            // Store the user data in your database
+            await storeUserInDatabase(userData);
+
             handleCloseModal();
             navigate("/");
         } catch (error) {
-            setError(error.message);
+            const friendlyMessage = getFriendlyErrorMessage(error);
+            setError(friendlyMessage);
         }
     };
+
+
 
     const handleLogout = async () => {
         await signOut(auth);
@@ -166,7 +291,6 @@ const NavigationBar = ({ cartItemCount }) => {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                             ></Form.Control>
-                            <Form.Text className='text-muted'>We&apos;ll never share your email with anyone else.</Form.Text>
                         </Form.Group>
                         <Form.Group className="mb-3" controlId="formBasicPassword">
                             <Form.Label>Password</Form.Label>

@@ -17,7 +17,7 @@ const CourtDetailsPage = () => {
     useEffect(() => {
         fetchCourtDetails();
         fetchImages();
-    }, [id]); // Re-fetch if the ID changes
+    }, []); // Re-fetch if the ID changes
 
     const fetchCourtDetails = async () => {
         setIsLoading(true);

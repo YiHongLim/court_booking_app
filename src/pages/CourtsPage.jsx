@@ -31,7 +31,6 @@ const CourtsPage = () => {
             )
                 : (
                     <Row>
-                        <Button>Hello ShadCN</Button>
                         {courts.map(court => (
                             <Col key={court.id} sm={12} md={6} lg={4}>
                                 <CourtCard court={court} />
