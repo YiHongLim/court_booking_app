@@ -13,16 +13,17 @@ const CourtDetailsPage = () => {
     const [images, setImages] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-
+    const BASE_URL = import.meta.env.VITE_API_URL;
+    console.log(BASE_URL)
     useEffect(() => {
         fetchCourtDetails();
         fetchImages();
-    }, []); // Re-fetch if the ID changes
+    }, []);
 
     const fetchCourtDetails = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch(`https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev/courts/${id}`);
+            const response = await fetch(`${BASE_URL}/courts/${id}`);
             if (!response.ok) throw new Error('Court not found');
             const data = await response.json();
             setCourt(data);

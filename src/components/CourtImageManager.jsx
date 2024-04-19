@@ -1,4 +1,3 @@
-// CourtImageManager.js
 import { deleteObject, getDownloadURL, listAll, ref, uploadBytes } from 'firebase/storage';
 import { useEffect, useState } from 'react';
 import { Button, Container, Row, Col, Form, Card } from 'react-bootstrap';
@@ -6,10 +5,18 @@ import { storage } from '../firebase';
 
 const CourtImageManager = ({ courtId, fetchImages }) => {
     const [file, setFile] = useState(null);
+    const [images, setImages] = useState([]);
 
     useEffect(() => {
-        fetchImages();
+        fetchAndSetImages();
     }, [fetchImages]);
+
+    const fetchAndSetImages = async () => {
+        const imagesRef = ref(storage, `courts/${courtId}`);
+        const snapshot = await listAll(imagesRef);
+        const imageUrls = await Promise.all(snapshot.items.map(item => getDownloadURL(item)));
+        setImages(imageUrls);
+    };
 
     const uploadImage = async () => {
         if (!file) {
@@ -18,13 +25,13 @@ const CourtImageManager = ({ courtId, fetchImages }) => {
         }
         const imageRef = ref(storage, `courts/${courtId}/${file.name}`);
         await uploadBytes(imageRef, file);
-        fetchImages(); // Refresh images after upload
+        fetchAndSetImages(); // Refresh images after upload
     };
 
-    const deleteImage = async (imageUrl) => {
-        const imageRef = ref(storage, imageUrl);
-        await deleteObject(imageRef);
-        fetchImages(); // Refresh images after deletion
+    const deleteImage = async (imageRef) => {
+        const refToDelete = ref(storage, imageRef);
+        await deleteObject(refToDelete);
+        fetchAndSetImages(); // Refresh images after deletion
     };
 
     const handleFileChange = (event) => {
@@ -43,6 +50,18 @@ const CourtImageManager = ({ courtId, fetchImages }) => {
                         <Button onClick={uploadImage}>Upload Image</Button>
                     </Form>
                 </Col>
+            </Row>
+            <Row>
+                {images.map((image, index) => (
+                    <Col key={index} xs={12} md={4} lg={3}>
+                        <Card className="mb-3">
+                            <Card.Img variant="top" src={image} />
+                            <Card.Body>
+                                <Button variant="danger" onClick={() => deleteImage(`courts/${courtId}/${image.split('/').pop()}`)}>Delete Image</Button>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                ))}
             </Row>
         </Container>
     );
