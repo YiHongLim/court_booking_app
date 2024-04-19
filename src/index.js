@@ -7,7 +7,7 @@ import pkg from 'pg';
 // Destructure the required parts from the module object
 const { Pool } = pkg;
 
-const { DATABASE_URL } = import.meta.env.DATABASE_URL;
+const { DATABASE_URL } = process.env;
 
 const app = express();
 app.use(cors());
@@ -90,30 +90,6 @@ app.put('/users/:userId', async (req, res) => {
     } catch (error) {
         console.error('Error updating user profile:', error);
         res.status(500).send('Failed to update user profile');
-    }
-});
-
-
-
-app.post('/login', async (req, res) => {
-    const { idToken } = req.body;
-    try {
-        const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken);
-        const uid = decodedToken.uid;
-
-        const userQuery = await pool.query('SELECT * FROM users WHERE firebase_uid = $1', [uid]);
-        if (userQuery.rows.length === 0) {
-            const newUserQuery = await pool.query(
-                'INSERT INTO users (firebase_uid, name, email) VALUES ($1, $2, $3) RETURNING *',
-                [uid, decodedToken.name, decodedToken.email]
-            );
-            res.json(newUserQuery.rows[0]);
-        } else {
-            res.status(200).send('User already exists');
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(error.code === 'auth/id-token-expired' ? 401 : 500).send(error.code === 'auth/id-token-expired' ? 'Session expired' : 'Internal Server Error');
     }
 });
 
