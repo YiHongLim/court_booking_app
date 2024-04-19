@@ -96,6 +96,8 @@ const NavigationBar = ({ cartItemCount }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const BASE_URL = import.meta.env.VITE_API_URL;
+
 
     const [showSignUpModal, setShowSignUpModal] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
@@ -174,7 +176,7 @@ const NavigationBar = ({ cartItemCount }) => {
 
     const storeUserInDatabase = async (userData) => {
         try {
-            const response = await fetch('https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev/users', {
+            const response = await fetch(`${BASE_URL}/users`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
