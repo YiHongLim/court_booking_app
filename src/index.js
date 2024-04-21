@@ -8,6 +8,7 @@ import pkg from 'pg';
 const { Pool } = pkg;
 
 const { DATABASE_URL } = process.env;
+console.log(DATABASE_URL)
 
 const app = express();
 app.use(cors());
@@ -19,6 +20,38 @@ const pool = new Pool({
         rejectUnauthorized: false,
     },
 });
+
+const Stripe = require('stripe');
+const stripe = Stripe(process.env.STRIPE_PRIVATE_KEY);
+console.log(process.env.STRIPE_PRIVATE_KEY);
+
+// Endpoint to create a payment intent
+app.post('/create-payment-intent', async (req, res) => {
+    try {
+        // Calculate the total cost of the bookings
+        const { bookings } = req.body; // Make sure to validate and authenticate the user's input
+        const amount = bookings.reduce((sum, booking) => sum + booking.price, 0);
+
+        // Create a payment intent with the order amount and currency
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: amount, // Amount is expected in cents (for USD)
+            currency: 'usd', // Use the currency you want
+            automatic_payment_methods: {
+                enabled: true,
+            },
+            // You can add more options here if necessary
+        });
+
+        // Send the client secret to the client to use with Stripe Elements
+        res.send({
+            clientSecret: paymentIntent.client_secret,
+        });
+    } catch (error) {
+        console.error('Error creating payment intent:', error);
+        res.status(500).send({ error: error.message });
+    }
+});
+
 
 // POST endpoint to add a new user or update an existing user
 app.post('/users', async (req, res) => {
@@ -107,12 +140,12 @@ getPostgresVersion();
 
 // add courts, not implemented in FE
 app.post('/courts', async (req, res) => {
-    const { name, location, description } = req.body;
+    const { name, location, description, price } = req.body;
     const client = await pool.connect();
     try {
         const newCourt = await client.query(
-            'INSERT INTO courts (name, location, description, created_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING *',
-            [name, location, description]
+            'INSERT INTO courts (name, location, description, price, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) RETURNING *',
+            [name, location, description, price]
         );
         res.json(newCourt.rows[0]);
     } catch (err) {
@@ -171,12 +204,12 @@ app.get('/courts/:id', async (req, res) => {
 // update courts, not implemented in FE
 app.put('/courts/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, location, description } = req.body;
+    const { name, location, description, price } = req.body;
     const client = await pool.connect();
     try {
         const updatedCourt = await client.query(
-            'UPDATE courts SET name = $1, location = $2, description = $3 WHERE id = $4 RETURNING *',
-            [name, location, description, id]
+            'UPDATE courts SET name = $1, location = $2, description = $3, price = $4 WHERE id = $4 RETURNING *',
+            [name, location, description, price, id]
         );
         if (updatedCourt.rows.length > 0) {
             res.json(updatedCourt.rows[0]);

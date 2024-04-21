@@ -6,6 +6,8 @@ import NavigationBar from "./components/NavigationBar"
 import CourtDetailsPage from "./pages/DetailsPage"
 import { Provider } from "react-redux"
 import { store } from "./app/store"
+import PaymentPage from "./components/PaymentPage"
+
 
 
 function App() {
@@ -20,6 +22,7 @@ function App() {
             <Route path="/booking" element={<BookingPage />} />
             <Route path="/" element={<CourtsPage />} />
             <Route path="/courts/:id" element={<CourtDetailsPage />} />
+            <Route path="/payment" element={<PaymentPage />} />
             <Route path="*" element={<CourtsPage />} />
           </Routes>
         </BrowserRouter>
