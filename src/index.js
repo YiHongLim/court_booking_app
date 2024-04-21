@@ -21,9 +21,9 @@ const pool = new Pool({
     },
 });
 
-const Stripe = require('stripe');
-const stripe = Stripe(process.env.STRIPE_PRIVATE_KEY);
-console.log(process.env.STRIPE_PRIVATE_KEY);
+import Stripe from 'stripe';
+const stripe = new Stripe(import.meta.env.VITE_STRIPE_PRIVATE_KEY);
+console.log(import.meta.env.VITE_STRIPE_PRIVATE_KEY);
 
 // Endpoint to create a payment intent
 app.post('/create-payment-intent', async (req, res) => {
