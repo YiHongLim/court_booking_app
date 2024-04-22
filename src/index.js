@@ -8,7 +8,6 @@ import pkg from 'pg';
 const { Pool } = pkg;
 
 const { DATABASE_URL } = process.env;
-console.log(DATABASE_URL)
 
 const app = express();
 app.use(cors());
