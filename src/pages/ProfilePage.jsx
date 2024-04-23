@@ -12,17 +12,17 @@ import Form from 'react-bootstrap/Form';
 import Image from 'react-bootstrap/Image';
 
 import { getUserInfo, updateUserInfo } from '../features/users/activeUserSlice';
-import { getUserFromLocalStorage } from '../utils/storage';
+import { setUserInLocalStorage, getUserFromLocalStorage } from '../utils/storage';
 // =========================================
 export default function ProfilePage() {
     // ================
     const dispatch = useDispatch();
     const navigate = useNavigate();
     // ============
-    const user_id = useParams().id;
+    const userId = useParams().id;
 
     // Debug
-    //console.log("[Profile Page] User ID", user_id);
+    //console.log("[Profile Page] User ID", userId);
     // ============
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -80,7 +80,7 @@ export default function ProfilePage() {
         setImage(userData.profile_picture_url);
 
         // Then, we grab from server and update to latest information when completed.
-        dispatch(getUserInfo(user_id))
+        dispatch(getUserInfo(userId))
             .unwrap()
             .then(
                 (data) => {
@@ -90,13 +90,20 @@ export default function ProfilePage() {
                     setName(data.name);
                     setEmail(data.email);
                     setImage(data.profile_picture_url);
+
+                    setUserInLocalStorage({
+                        id: userId,
+                        email: data.email,
+                        name: data.name,
+                        profile_picture_url: data.profile_picture_url
+                    });
                 }
             )
             .catch((error) => {
                 // Debug
                 //console.log("[Get User Info Failed] Error.", error ? error : "N/A");
             });
-    }, [dispatch, user_id]);
+    }, [dispatch, userId]);
     // ============
     useEffect(() => {
         if (image)
@@ -122,16 +129,23 @@ export default function ProfilePage() {
         if (!isCorrectImageFormat)
             return;
 
-        const userObj = { user_id: user_id, name: name, email: email, profile_picture_url: image };
+        const userObj = { user_id: userId, name: name, email: email, profile_picture_url: image };
 
         // Debug
         console.log("[Update User Profile] New User Data.", userObj);
 
         dispatch(updateUserInfo(userObj))
             .unwrap()
-            .then((action) => {
+            .then((userData) => {
                 // Debug
                 //console.log("[On Update User Profile Successful] Payload.", action.payload);
+
+                setUserInLocalStorage({
+                    id: userId,
+                    email: userData.email,
+                    name: userData.name,
+                    profile_picture_url: userData.profile_picture_url
+                });
 
                 setMessage("User Profile updated successfully.");
             })

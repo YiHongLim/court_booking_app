@@ -92,6 +92,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { setUserInLocalStorage, getUserFromLocalStorage, clearUserFromLocalStorage } from '../../utils/storage';
 import { useDispatch, useSelector } from 'react-redux';
 
+import defaultProfileImage from '../../assets/images/user-profile-default.webp';
+
 const NavBar = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -101,7 +103,7 @@ const NavBar = () => {
     const [error, setError] = useState('');
 
     const [name, setName] = useState('');
-    const [image, setImage] = useState('');
+    const [image, setImage] = useState(null);
 
     const { currentUser, setCurrentUser } = useAuth();
 
@@ -147,9 +149,6 @@ const NavBar = () => {
         e.preventDefault();
         setError("");
         try {
-            console.log("Auth", auth);
-            console.log("Email.", email);
-            console.log("Password.", password);
             const res = await signInWithEmailAndPassword(auth, email, password);
 
             console.log(res.user);
@@ -226,6 +225,8 @@ const NavBar = () => {
                 if (user) {
                     setUserId(user.id);
                     setName(user.name);
+                    setImage(user.profile_picture_url);
+
                     dispatch(login(user.id));
                 }
             }
@@ -268,6 +269,11 @@ const NavBar = () => {
     const handleLogout = async () => {
         await signOut(auth);
         clearUserFromLocalStorage();
+
+        setUserId('');
+        setName('');
+        setImage(null);
+
         navigate("/");
     };
     // ==================================
@@ -283,7 +289,7 @@ const NavBar = () => {
     // If user is logged in (Via Email/Password Combination or Socials, use Display Name if available, otherwise Email)
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
-        let username = null;
+        let name = null;
 
         if (storedUser) {
             const userData = getUserFromLocalStorage();
@@ -292,16 +298,19 @@ const NavBar = () => {
             console.log("[On Page Startup] Cache Stored User.", userData);
 
             setUserId(userData.id);
+            setImage(userData.profile_picture_url);
+
             if (currentUser)
-                username = currentUser.displayName ? currentUser.displayName : userData.name;
+                name = currentUser.displayName ? currentUser.displayName : userData.name;
         }
         else
-            username = currentUser.displayName ? currentUser.displayName : currentUser.email;
+            name = currentUser.displayName ? currentUser.displayName : currentUser.email;
 
         // Debug
         //console.log("[On Page Startup] Current User.", currentUser);
-        console.log("[On Page Startup] Name.", username);
-        setName(username);
+        //console.log("[On Page Startup] Name.", name);
+
+        setName(name);
     }, [currentUser]);
     // ==================================
     return (
@@ -337,23 +346,18 @@ const NavBar = () => {
                                         </Button>
                                         {/* ---------------------- */}
                                         {/* Access to Profile Page */}
-                                        {
-                                            image ? (
-                                                <Image src={image}
-                                                    onClick={handleProfile}
-                                                    style={{
-                                                        marginLeft: '10px',
-                                                        width: '100%', height: 'auto',
-                                                        minWidth: '16px', minHeight: '16px',
-                                                        maxWidth: '24px', maxHeight: '24px'
-                                                    }} />
-                                            ) : null
-                                        }
-                                        {/* ---------------------- */}
-                                        {/* Access to Profile Page */}
-                                        <Button variant="outline-success" onClick={handleProfile} style={{ marginLeft: '10px' }}>
-                                            {name}
-                                        </Button>
+                                        <div className="d-flex align-items-center">
+                                            <Image onClick={handleProfile} role="button" src={image ? image : defaultProfileImage}
+                                                style={{
+                                                    marginLeft: '30px',
+                                                    width: '100%', height: 'auto',
+                                                    minWidth: '24px', minHeight: '24px',
+                                                    maxWidth: '32px', maxHeight: '32px'
+                                                }} />
+                                            <Button onClick={handleProfile} variant="outline-success" onClick={handleProfile} style={{ marginLeft: '10px' }}>
+                                                {name}
+                                            </Button>
+                                        </div>
                                         {/* ---------------------- */}
                                     </>
                                 )
