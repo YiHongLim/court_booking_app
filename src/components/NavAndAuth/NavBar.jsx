@@ -1,7 +1,7 @@
 // import { useNavigate } from 'react-router-dom';
 // import { Navbar, Nav, Container, Badge, Button } from 'react-bootstrap';
 // import { useContext, useState } from 'react';
-// import { AuthContext } from '../context/AuthContext';
+// import { AuthContext } from '../../context/AuthContext';
 // import AuthModal from './AuthModal';
 // import { logoutUser } from './AuthService';
 // // Import any other necessary components
@@ -79,33 +79,31 @@
 
 
 
-import { useContext, useEffect, useState } from 'react';
-import { Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
-import GoogleButton from 'react-google-button';
-import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-
-import { auth } from '../firebase';
+import { Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
 import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
-
-import { AuthContext } from '../context/AuthContext';
+import { useContext, useEffect, useState } from 'react';
+import { AuthContext } from '../../context/AuthContext';
 import { login } from '../features/users/activeUserSlice';
+import { auth } from '../../firebase';
+import PasswordResetModal from '../PasswordResetModal';
+import GoogleButton from 'react-google-button';
+import { useAuth } from '@/hooks/useAuth';
+import { setUserInLocalStorage, getUserFromLocalStorage, clearUserFromLocalStorage } from '../../utils/storage';
+import { useDispatch, useSelector } from 'react-redux';
 
-import PasswordResetModal from './PasswordResetModal';
-
-const NavigationBar = ({ cartItemCount }) => {
+const NavBar = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
-
-    const { currentUser } = useContext(AuthContext);
-    // const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [userId, setUserId] = useState(null);
     const [error, setError] = useState('');
-    const BASE_URL = import.meta.env.VITE_API_URL;
+    const { currentUser, setCurrentUser } = useAuth();
+    const cartItemCount = useSelector((state) => state.bookings.bookingTotalQuantity);
 
+    const BASE_URL = import.meta.env.VITE_API_URL;
 
     const [showSignUpModal, setShowSignUpModal] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
@@ -128,6 +126,7 @@ const NavigationBar = ({ cartItemCount }) => {
                 email,
                 password
             );
+            setUserInLocalStorage({ uid: res.user.uid, email: res.user.email });
             console.log(res.user);
             handleCloseModal();
             navigate("/"); // Navigate to a more appropriate route if needed
@@ -142,12 +141,13 @@ const NavigationBar = ({ cartItemCount }) => {
         setError("");
         try {
             const res = await signInWithEmailAndPassword(auth, email, password);
+            setUserInLocalStorage({ uid: res.user.uid, email: res.user.email });
+
             console.log(res.user);
             handleCloseModal();
 
             // After successful sign-up or login
             const user = res.user; // The user object from Firebase
-
             await storeUserInDatabase({
                 firebaseUid: user.uid,
                 name: "Dummy",
@@ -160,6 +160,7 @@ const NavigationBar = ({ cartItemCount }) => {
             const friendlyMessage = getFriendlyErrorMessage(error);
             setError(friendlyMessage);
         }
+
     };
 
     // Utility function to convert Firebase error code to user-friendly message
@@ -184,9 +185,6 @@ const NavigationBar = ({ cartItemCount }) => {
 
     const storeUserInDatabase = async (userData) => {
         try {
-            // Debug
-            //console.log("[On Login Successful] User Data", userData);
-
             const response = await fetch(`${BASE_URL}/users`, {
                 method: 'POST',
                 headers: {
@@ -234,7 +232,12 @@ const NavigationBar = ({ cartItemCount }) => {
                 email: res.user.email,
                 // You can add more details here if required
             };
-            setName(res.user.displayName);
+
+            localStorage.setItem('user', JSON.stringify({
+                uid: res.user.uid,
+                name: res.user.displayName,
+                email: res.user.email
+            }));
 
             // Store the user data in your database
             await storeUserInDatabase(userData);
@@ -249,8 +252,19 @@ const NavigationBar = ({ cartItemCount }) => {
 
     const handleLogout = async () => {
         await signOut(auth);
+        clearUserFromLocalStorage();
         navigate("/");
     };
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            const userData = getUserFromLocalStorage();
+            if (userData) {
+                setCurrentUser(userData);
+            }
+        }
+    }, [setCurrentUser]);
     // ==================================
     const handleProfile = () => {
         if (userId)
@@ -362,9 +376,9 @@ const NavigationBar = ({ cartItemCount }) => {
                         />
                     </Form>
                 </Modal.Body>
-            </Modal>
+            </Modal >
         </>
     );
 };
 
-export default NavigationBar;
+export default NavBar;

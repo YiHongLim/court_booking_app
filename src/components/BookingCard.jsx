@@ -5,11 +5,15 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 import { TextField } from '@mui/material';
 import { useAuth } from '../hooks/useAuth'; // Adjust the import path as necessary
+import { useDispatch } from 'react-redux';
+import { createBooking } from '@/features/courts/bookingSlice';
 
-const BookingCard = ({ courtId, onBookingSuccess }) => {
+
+const BookingCard = ({ courtId }) => {
     const { currentUser } = useAuth(); // Use the useAuth hook to access the current user
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate] = useState(new Date());
+    const dispatch = useDispatch();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,33 +24,36 @@ const BookingCard = ({ courtId, onBookingSuccess }) => {
         }
 
         const bookingDetails = {
-            courtId: courtId,
+            courtId,
             firebaseUid: currentUser?.uid, // Use the UID from the currentUser object
             startTime: startDate.toISOString(), // Convert dates to ISO string for backend compatibility
             endTime: endDate.toISOString(),
         };
 
-        console.log(bookingDetails);
-        const apiUrl = 'https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev/bookings'; // Use your actual API URL
+        dispatch(createBooking(bookingDetails))
+            .unwrap()
 
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(bookingDetails),
-            });
+        // console.log(bookingDetails);
+        // const apiUrl = 'https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev/bookings'; // Use your actual API URL
 
-            if (!response.ok) {
-                throw new Error('Failed to create booking');
-            }
+        // try {
+        //     const response = await fetch(apiUrl, {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //         },
+        //         body: JSON.stringify(bookingDetails),
+        //     });
 
-            onBookingSuccess(); // Notify the parent component about the successful booking
-        } catch (error) {
-            console.error('Booking error:', error);
-            alert("Failed to book the court. Please try again.");
-        }
+        //     if (!response.ok) {
+        //         throw new Error('Failed to create booking');
+        //     }
+
+        //     onBookingSuccess(); // Notify the parent component about the successful booking
+        // } catch (error) {
+        //     console.error('Booking error:', error);
+        //     alert("Failed to book the court. Please try again.");
+        // }
     };
 
     return (

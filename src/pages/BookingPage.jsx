@@ -10,7 +10,7 @@ const BookingPage = () => {
     const { currentUser } = useAuth();
     const userId = currentUser?.uid;
     const dispatch = useDispatch();
-    const bookings = useSelector((state) => state.bookings.bookings);
+    const bookings = useSelector((state) => state.bookings.bookingItems);
     const bookingStatus = useSelector((state) => state.bookings.status);
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
@@ -57,6 +57,7 @@ const BookingPage = () => {
                             <Col key={booking.id} sm={12} md={6} lg={4}>
                                 <Card className="mb-4">
                                     <Card.Body>
+                                        {console.log(booking)}
                                         <Card.Title>{booking.court_name}</Card.Title>
                                         <Card.Text>
                                             Location: {booking.court_location}<br />
@@ -68,7 +69,7 @@ const BookingPage = () => {
                                     </Card.Body>
                                 </Card>
                             </Col>
-                        )) : bookingStatus === 'succeeded' && <p>No bookings found.</p>}
+                        )) : bookingStatus === 'succeeded' && <p>Your bookings are currently empty.</p>}
                     {selectedBooking && (
                         <EditBookingModal
                             show={showEditModal}

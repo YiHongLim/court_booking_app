@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal, Button, Form, Alert } from 'react-bootstrap';
-import { signUpUser, loginUser, signInWithGoogle, logoutUser/* other authService functions */ } from './authService';
+import { signUpUser, loginUser, signInWithGoogle, logoutUser/* other authService functions */ } from './AuthService';
 
 const AuthModal = ({ showSignUp, showLogin, handleClose }) => {
     // Local state management for the component

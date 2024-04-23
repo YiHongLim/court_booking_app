@@ -81,7 +81,7 @@ const CourtDetailsPage = () => {
                     )}
                 </Col>
                 <Col xs={12} md={4}>
-                    <BookingCard courtId={id} onBookingSuccess={() => alert('Booking successful!')} />
+                    <BookingCard courtId={id} />
                 </Col>
             </Row>
             <Row className="mt-3">
