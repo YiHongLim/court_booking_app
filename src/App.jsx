@@ -7,9 +7,8 @@ import CourtDetailsPage from "./pages/DetailsPage"
 import { Provider } from "react-redux"
 import { store } from "./app/store"
 import PaymentPage from "./pages/PaymentPage"
-
-
-
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 function App() {
 
   const cartItemCount = 3;
@@ -17,7 +16,7 @@ function App() {
     <AuthProvider>
       <Provider store={store}>
         <BrowserRouter>
-          <NavBar cartItemCount={cartItemCount} />
+          <NavBar />
           <Routes>
             <Route path="/booking" element={<BookingPage />} />
             <Route path="/" element={<CourtsPage />} />
@@ -25,6 +24,7 @@ function App() {
             <Route path="/payment" element={<PaymentPage />} />
             <Route path="*" element={<CourtsPage />} />
           </Routes>
+          <ToastContainer position="top-right" autoClose={5000} hideProgressBar newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
         </BrowserRouter>
       </Provider>
     </AuthProvider>

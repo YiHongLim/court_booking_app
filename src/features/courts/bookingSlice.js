@@ -1,6 +1,7 @@
 // Importing necessary utilities from Redux Toolkit and Redux Thunk for asynchronous actions
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios'; // Using axios for HTTP requests
+import { toast } from 'react-toastify';
 // import { storage } from '../../firebase';
 // import { ref, uploadBytes, getDownloadURL  } from 'firebase/storage';
 
@@ -15,6 +16,20 @@ export const fetchBookings = createAsyncThunk(
             return response?.data; // Assuming the response body contains an array of bookings
         } catch (error) {
             return rejectWithValue('Failed to load bookings. Please try again later.');
+        }
+    }
+);
+
+export const createBooking = createAsyncThunk(
+    'bookings/createBooking',
+    async (bookingDetails, { rejectWithValue }) => {
+        try {
+            const response = await axios.post(`${BASE_URL}/bookings`, bookingDetails);
+            toast.success('Booking created successfully!');
+
+            return response.data; // Assuming the API returns the created booking
+        } catch (error) {
+            return rejectWithValue(error.response.data || 'Failed to create booking');
         }
     }
 );
@@ -41,7 +56,10 @@ export const deleteBooking = createAsyncThunk(
     'bookings/deleteBooking',
     async (bookingId, { rejectWithValue }) => {
         try {
+            console.log(bookingId)
             await axios.delete(`${BASE_URL}/${bookingId}`);
+            console.log("run")
+
             return bookingId; // Return the id of the deleted booking
         } catch (error) {
             return rejectWithValue('Failed to delete the booking. Please try again.');
@@ -51,7 +69,9 @@ export const deleteBooking = createAsyncThunk(
 
 // Initial state for the bookings slice
 const initialState = {
-    bookings: [],
+    bookingItems: [],
+    bookingTotalQuantity: 0,
+    bookingTotalAmount: 0,
     status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
     error: null,
 };
@@ -68,21 +88,49 @@ const bookingsSlice = createSlice({
             })
             .addCase(fetchBookings.fulfilled, (state, action) => {
                 state.status = 'succeeded';
-                state.bookings = action.payload;
+                state.bookingItems = action.payload;
             })
             .addCase(fetchBookings.rejected, (state, action) => {
                 state.status = 'failed';
                 state.error = action.payload;
             })
+            .addCase(createBooking.pending, (state) => {
+                state.status = 'loading';
+            })
+            .addCase(createBooking.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                // Add the new booking to the bookingItems array
+                state.bookingItems.push(action.payload);
+                state.bookingTotalQuantity += 1;
+
+            })
+            .addCase(createBooking.rejected, (state, action) => {
+                state.status = 'failed';
+                state.error = action.payload;
+            })
             .addCase(updateBooking.fulfilled, (state, action) => {
                 const { bookingId, startTime, endTime } = action.payload;
-                const index = state.bookings.findIndex(booking => booking.id === bookingId);
+                const index = state.bookingItems.findIndex(booking => booking.id === bookingId);
                 if (index !== -1) {
-                    state.bookings[index] = { ...state.bookings[index], start_time: startTime, end_time: endTime };
+                    state.bookingItems[index] = { ...state.bookingItems[index], start_time: startTime, end_time: endTime };
                 }
             })
             .addCase(deleteBooking.fulfilled, (state, action) => {
-                state.bookings = state.bookings.filter(booking => booking.id !== action.payload);
+                state.bookingItems = state.bookingItems.filter(booking => booking.id !== action.payload);
+            })
+            .addCase(updateBooking.pending, (state) => {
+                state.status = 'loading';
+            })
+            .addCase(updateBooking.rejected, (state, action) => {
+                state.status = 'failed';
+                state.error = action.payload;
+            })
+            .addCase(deleteBooking.pending, (state) => {
+                state.status = 'loading';
+            })
+            .addCase(deleteBooking.rejected, (state, action) => {
+                state.status = 'failed';
+                state.error = action.payload;
             });
         // Additional cases for updateBooking.pending, updateBooking.rejected, etc., can be added similarly
     },

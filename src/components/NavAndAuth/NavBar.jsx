@@ -82,22 +82,25 @@
 import { useNavigate } from 'react-router-dom';
 import { Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
 import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import { auth } from '../../firebase';
 import PasswordResetModal from '../PasswordResetModal';
 import GoogleButton from 'react-google-button';
+import { useAuth } from '@/hooks/useAuth';
+import { setUserInLocalStorage, getUserFromLocalStorage, clearUserFromLocalStorage } from '../../utils/storage';
+import { useSelector } from 'react-redux';
 
-
-const NavBar = ({ cartItemCount }) => {
+const NavBar = () => {
     const navigate = useNavigate();
-    const { currentUser } = useContext(AuthContext);
     // const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const BASE_URL = import.meta.env.VITE_API_URL;
+    const { currentUser, setCurrentUser } = useAuth();
+    const cartItemCount = useSelector((state) => state.bookings.bookingTotalQuantity);
 
+    const BASE_URL = import.meta.env.VITE_API_URL;
 
     const [showSignUpModal, setShowSignUpModal] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
@@ -120,6 +123,7 @@ const NavBar = ({ cartItemCount }) => {
                 email,
                 password
             );
+            setUserInLocalStorage({ uid: res.user.uid, email: res.user.email });
             console.log(res.user);
             handleCloseModal();
             navigate("/"); // Navigate to a more appropriate route if needed
@@ -134,6 +138,8 @@ const NavBar = ({ cartItemCount }) => {
         setError("");
         try {
             const res = await signInWithEmailAndPassword(auth, email, password);
+            setUserInLocalStorage({ uid: res.user.uid, email: res.user.email });
+
             console.log(res.user);
             handleCloseModal();
 
@@ -155,24 +161,24 @@ const NavBar = ({ cartItemCount }) => {
     };
 
     // Utility function to convert Firebase error code to user-friendly message
-    // const getFriendlyErrorMessage = (error) => {
-    //     switch (error.code) {
-    //         case 'auth/email-already-in-use':
-    //             return 'This email is already in use. Please use a different email.';
-    //         case 'auth/invalid-email':
-    //             return 'Invalid email address. Please check your email.';
-    //         case 'auth/weak-password':
-    //             return 'Password is too weak. Please use a stronger password.';
-    //         case 'auth/user-not-found':
-    //             return 'No user found with this email. Please sign up.';
-    //         case 'auth/wrong-password':
-    //             return 'Incorrect password. Please try again.';
-    //         case 'auth/missing-password':
-    //             return 'Please enter your password.';
-    //         default:
-    //             return 'An unexpected error occurred. Please try again.';
-    //     }
-    // };
+    const getFriendlyErrorMessage = (error) => {
+        switch (error.code) {
+            case 'auth/email-already-in-use':
+                return 'This email is already in use. Please use a different email.';
+            case 'auth/invalid-email':
+                return 'Invalid email address. Please check your email.';
+            case 'auth/weak-password':
+                return 'Password is too weak. Please use a stronger password.';
+            case 'auth/user-not-found':
+                return 'No user found with this email. Please sign up.';
+            case 'auth/wrong-password':
+                return 'Incorrect password. Please try again.';
+            case 'auth/missing-password':
+                return 'Please enter your password.';
+            default:
+                return 'An unexpected error occurred. Please try again.';
+        }
+    };
 
     const storeUserInDatabase = async (userData) => {
         try {
@@ -209,6 +215,12 @@ const NavBar = ({ cartItemCount }) => {
                 // You can add more details here if required
             };
 
+            localStorage.setItem('user', JSON.stringify({
+                uid: res.user.uid,
+                name: res.user.displayName,
+                email: res.user.email
+            }));
+
             // Store the user data in your database
             await storeUserInDatabase(userData);
 
@@ -222,8 +234,20 @@ const NavBar = ({ cartItemCount }) => {
 
     const handleLogout = async () => {
         await signOut(auth);
+        clearUserFromLocalStorage();
         navigate("/");
     };
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            const userData = getUserFromLocalStorage();
+            if (userData) {
+                setCurrentUser(userData);
+            }
+        }
+    }, [setCurrentUser]);
+
     return (
         <>
             <Navbar bg="dark" expand="lg" data-bs-theme="dark">
