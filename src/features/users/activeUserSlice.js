@@ -23,7 +23,7 @@ export const updateUserInfo = createAsyncThunk(
     async (params, { rejectWithValue }) => {
         try {
             const response = await axios.put(`${BASE_URL}/users/${params.user_id}`, {
-                username: params.username,
+                name: params.name,
                 email: params.email,
                 profile_picture_url: params.profile_picture_url
             });

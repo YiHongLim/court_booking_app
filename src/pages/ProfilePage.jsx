@@ -12,10 +12,12 @@ import Form from 'react-bootstrap/Form';
 import Image from 'react-bootstrap/Image';
 
 import { getUserInfo, updateUserInfo } from '../features/users/activeUserSlice';
+import { getUserFromLocalStorage } from '../utils/storage';
 // =========================================
 export default function ProfilePage() {
     // ================
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     // ============
     const user_id = useParams().id;
 
@@ -70,12 +72,20 @@ export default function ProfilePage() {
         // Debug
         //console.log("Fetching User's Profile Info");
 
+        // First, we pre-load from cache.
+        const userData = getUserFromLocalStorage();
+
+        setName(userData.name);
+        setEmail(userData.email);
+        setImage(userData.profile_picture_url);
+
+        // Then, we grab from server and update to latest information when completed.
         dispatch(getUserInfo(user_id))
             .unwrap()
             .then(
                 (data) => {
                     // Debug
-                    console.log("[Get User Info Successful] Payload.", data);
+                    //console.log("[Get User Info Successful] Payload.", data);
 
                     setName(data.name);
                     setEmail(data.email);
@@ -84,7 +94,7 @@ export default function ProfilePage() {
             )
             .catch((error) => {
                 // Debug
-                console.log("[Get User Info Failed] Error.", error ? error : "N/A");
+                //console.log("[Get User Info Failed] Error.", error ? error : "N/A");
             });
     }, [dispatch, user_id]);
     // ============
@@ -112,10 +122,10 @@ export default function ProfilePage() {
         if (!isCorrectImageFormat)
             return;
 
-        const userObj = { user_id: user_id, username: name, email: email, profile_picture_url: image };
+        const userObj = { user_id: user_id, name: name, email: email, profile_picture_url: image };
 
         // Debug
-        //console.log("[Update User Profile] New User Data.", userObj);
+        console.log("[Update User Profile] New User Data.", userObj);
 
         dispatch(updateUserInfo(userObj))
             .unwrap()
@@ -133,6 +143,10 @@ export default function ProfilePage() {
                 setIsError(true);
             });
     };
+
+    const onReturnToHomePage = () => {
+        navigate("/");
+    };
     // ================
     return (
         <>
@@ -140,14 +154,14 @@ export default function ProfilePage() {
                 <Form onSubmit={onUpdateUserProfile}>
                     <Row className="d-flex flex-column align-items-center mb-3">
                         <Col className="col-12 d-flex flex-column align-items-center col-12 mt-3 mb-3 w-50">
-                            <h2 className="fw-bold text-center">
+                            <p className="fs-1 fw-bold text-center">
                                 Profile Page
-                            </h2>
+                            </p>
                         </Col>
                         <Col className="col-12 d-flex flex-column align-items-center col-12 mb-3 ms-5 w-50" style={{ minWidth: "450px" }}>
                             {/* -------------------------------------- */}
                             {/* Email */}
-                            <div className="d-flex mb-3 mt-3 w-100">
+                            <div className="d-flex mt-3 w-100">
                                 <Form.Label htmlFor="name" className="me-3" style={{ width: "15%", minWidth: "60px" }}>
                                     Email:
                                 </Form.Label>
@@ -157,8 +171,9 @@ export default function ProfilePage() {
                                     maxLength={64}
                                     type="email"
                                     className="w-100"
+                                    onChange={(event) => setEmail(event.target.value)}
                                     style={{ resize: "none", height: "fit-content", minWidth: "300px" }}
-                                    disabled
+                                    required
                                 />
                             </div>
                             {/* -------------------------------------- */}
@@ -225,6 +240,9 @@ export default function ProfilePage() {
                             <div className="d-flex justify-content-center w-100">
                                 <Button type="submit" style={{ marginRight: "10%" }}>
                                     Update Profile
+                                </Button>
+                                <Button onClick={onReturnToHomePage}>
+                                    Return to Home Page
                                 </Button>
                             </div>
                             {/* -------------------------------------- */}

@@ -80,11 +80,11 @@
 
 
 import { useNavigate } from 'react-router-dom';
-import { Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
+import { Image, Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
 import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 import { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../../context/AuthContext';
-import { login } from '../features/users/activeUserSlice';
+import { login } from '../../features/users/activeUserSlice';
 import { auth } from '../../firebase';
 import PasswordResetModal from '../PasswordResetModal';
 import GoogleButton from 'react-google-button';
@@ -96,12 +96,17 @@ const NavBar = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const [email, setEmail] = useState('');
-    const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [userId, setUserId] = useState(null);
     const [error, setError] = useState('');
+
+    const [name, setName] = useState('');
+    const [image, setImage] = useState('');
+
     const { currentUser, setCurrentUser } = useAuth();
+
     const cartItemCount = useSelector((state) => state.bookings.bookingTotalQuantity);
+    const cachedActiveUserObj = useSelector((state) => state.activeUser);
 
     const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -126,8 +131,10 @@ const NavBar = () => {
                 email,
                 password
             );
-            setUserInLocalStorage({ uid: res.user.uid, email: res.user.email });
-            console.log(res.user);
+
+            // Debug
+            console.log("[Registration] User.", res.user);
+
             handleCloseModal();
             navigate("/"); // Navigate to a more appropriate route if needed
         } catch (error) {
@@ -140,8 +147,10 @@ const NavBar = () => {
         e.preventDefault();
         setError("");
         try {
+            console.log("Auth", auth);
+            console.log("Email.", email);
+            console.log("Password.", password);
             const res = await signInWithEmailAndPassword(auth, email, password);
-            setUserInLocalStorage({ uid: res.user.uid, email: res.user.email });
 
             console.log(res.user);
             handleCloseModal();
@@ -160,7 +169,6 @@ const NavBar = () => {
             const friendlyMessage = getFriendlyErrorMessage(error);
             setError(friendlyMessage);
         }
-
     };
 
     // Utility function to convert Firebase error code to user-friendly message
@@ -194,7 +202,7 @@ const NavBar = () => {
             });
 
             // Debug
-            //console.log("[On Login Successful] Response.", response);
+            //console.log("[On Login] Response.", response);
 
             if (!response.ok) {
                 // Handle the error
@@ -206,7 +214,14 @@ const NavBar = () => {
                 const user = await response.json();
 
                 // Debug
-                console.log("[On Login Successful] Response Result (User).", user);
+                //console.log("[On Login Successful] Response Result (User).", user);
+
+                setUserInLocalStorage({
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    profile_picture_url: user.profile_picture_url
+                });
 
                 if (user) {
                     setUserId(user.id);
@@ -255,16 +270,6 @@ const NavBar = () => {
         clearUserFromLocalStorage();
         navigate("/");
     };
-
-    useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            const userData = getUserFromLocalStorage();
-            if (userData) {
-                setCurrentUser(userData);
-            }
-        }
-    }, [setCurrentUser]);
     // ==================================
     const handleProfile = () => {
         if (userId)
@@ -277,10 +282,26 @@ const NavBar = () => {
 
     // If user is logged in (Via Email/Password Combination or Socials, use Display Name if available, otherwise Email)
     useEffect(() => {
-        if (!currentUser)
-            return;
+        const storedUser = localStorage.getItem('user');
+        let username = null;
 
-        setName(currentUser.displayName ? currentUser.displayName : currentUser.email);
+        if (storedUser) {
+            const userData = getUserFromLocalStorage();
+
+            // Debug
+            console.log("[On Page Startup] Cache Stored User.", userData);
+
+            setUserId(userData.id);
+            if (currentUser)
+                username = currentUser.displayName ? currentUser.displayName : userData.name;
+        }
+        else
+            username = currentUser.displayName ? currentUser.displayName : currentUser.email;
+
+        // Debug
+        //console.log("[On Page Startup] Current User.", currentUser);
+        console.log("[On Page Startup] Name.", username);
+        setName(username);
     }, [currentUser]);
     // ==================================
     return (
@@ -304,23 +325,39 @@ const NavBar = () => {
                                     </Nav.Link>
                                 </>
                             )}
-                            {currentUser && (
-                                <>
-                                    <Button variant="outline-success" onClick={() => navigate('/booking')}>
-                                        Cart <Badge bg="secondary">{cartItemCount}</Badge>
-                                        <span className="visually-hidden">booking items</span>
-                                    </Button>
-                                    <Button variant="outline-danger" onClick={handleLogout} style={{ marginLeft: '10px' }}>
-                                        Logout
-                                    </Button>
-                                    {/* ---------------------- */}
-                                    {/* Access to Profile Page */}
-                                    <Button variant="outline-success" onClick={handleProfile} style={{ marginLeft: '10px' }}>
-                                        {name}
-                                    </Button>
-                                    {/* ---------------------- */}
-                                </>
-                            )}
+                            {
+                                currentUser && (
+                                    <>
+                                        <Button variant="outline-success" onClick={() => navigate('/booking')}>
+                                            Cart <Badge bg="secondary">{cartItemCount}</Badge>
+                                            <span className="visually-hidden">booking items</span>
+                                        </Button>
+                                        <Button variant="outline-danger" onClick={handleLogout} style={{ marginLeft: '10px' }}>
+                                            Logout
+                                        </Button>
+                                        {/* ---------------------- */}
+                                        {/* Access to Profile Page */}
+                                        {
+                                            image ? (
+                                                <Image src={image}
+                                                    onClick={handleProfile}
+                                                    style={{
+                                                        marginLeft: '10px',
+                                                        width: '100%', height: 'auto',
+                                                        minWidth: '16px', minHeight: '16px',
+                                                        maxWidth: '24px', maxHeight: '24px'
+                                                    }} />
+                                            ) : null
+                                        }
+                                        {/* ---------------------- */}
+                                        {/* Access to Profile Page */}
+                                        <Button variant="outline-success" onClick={handleProfile} style={{ marginLeft: '10px' }}>
+                                            {name}
+                                        </Button>
+                                        {/* ---------------------- */}
+                                    </>
+                                )
+                            }
                         </Nav>
                     </Navbar.Collapse>
                 </Container>
