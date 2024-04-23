@@ -79,22 +79,30 @@
 
 
 
-import { useNavigate } from 'react-router-dom';
+import { useContext, useEffect, useState } from 'react';
 import { Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
-import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
-import { useContext, useState } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import { auth } from '../firebase';
-import PasswordResetModal from './PasswordResetModal';
 import GoogleButton from 'react-google-button';
+import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 
+import { auth } from '../firebase';
+import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
+
+import { AuthContext } from '../context/AuthContext';
+import { login } from '../features/users/activeUserSlice';
+
+import PasswordResetModal from './PasswordResetModal';
 
 const NavigationBar = ({ cartItemCount }) => {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
+
     const { currentUser } = useContext(AuthContext);
     // const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [name, setName] = useState('');
     const [password, setPassword] = useState('');
+    const [userId, setUserId] = useState(null);
     const [error, setError] = useState('');
     const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -139,6 +147,7 @@ const NavigationBar = ({ cartItemCount }) => {
 
             // After successful sign-up or login
             const user = res.user; // The user object from Firebase
+
             await storeUserInDatabase({
                 firebaseUid: user.uid,
                 name: "Dummy",
@@ -151,7 +160,6 @@ const NavigationBar = ({ cartItemCount }) => {
             const friendlyMessage = getFriendlyErrorMessage(error);
             setError(friendlyMessage);
         }
-
     };
 
     // Utility function to convert Firebase error code to user-friendly message
@@ -176,6 +184,9 @@ const NavigationBar = ({ cartItemCount }) => {
 
     const storeUserInDatabase = async (userData) => {
         try {
+            // Debug
+            //console.log("[On Login Successful] User Data", userData);
+
             const response = await fetch(`${BASE_URL}/users`, {
                 method: 'POST',
                 headers: {
@@ -184,11 +195,26 @@ const NavigationBar = ({ cartItemCount }) => {
                 body: JSON.stringify(userData),
             });
 
+            // Debug
+            //console.log("[On Login Successful] Response.", response);
+
             if (!response.ok) {
                 // Handle the error
                 const errorText = await response.text();
                 console.error('Error storing user data:', errorText);
                 setError('There was a problem storing user data. Please try again.');
+            }
+            else {
+                const user = await response.json();
+
+                // Debug
+                console.log("[On Login Successful] Response Result (User).", user);
+
+                if (user) {
+                    setUserId(user.id);
+                    setName(user.name);
+                    dispatch(login(user.id));
+                }
             }
         } catch (error) {
             console.error('Error storing user data:', error);
@@ -208,6 +234,7 @@ const NavigationBar = ({ cartItemCount }) => {
                 email: res.user.email,
                 // You can add more details here if required
             };
+            setName(res.user.displayName);
 
             // Store the user data in your database
             await storeUserInDatabase(userData);
@@ -220,12 +247,28 @@ const NavigationBar = ({ cartItemCount }) => {
         }
     };
 
-
-
     const handleLogout = async () => {
         await signOut(auth);
         navigate("/");
     };
+    // ==================================
+    const handleProfile = () => {
+        if (userId)
+            navigate(`/profile/${userId}`);
+        else {
+            // Debug
+            console.error("Attempted to Move to Profile Page but User ID was not stored when user logged in.");
+        }
+    };
+
+    // If user is logged in (Via Email/Password Combination or Socials, use Display Name if available, otherwise Email)
+    useEffect(() => {
+        if (!currentUser)
+            return;
+
+        setName(currentUser.displayName ? currentUser.displayName : currentUser.email);
+    }, [currentUser]);
+    // ==================================
     return (
         <>
             <Navbar bg="dark" expand="lg" data-bs-theme="dark">
@@ -256,6 +299,12 @@ const NavigationBar = ({ cartItemCount }) => {
                                     <Button variant="outline-danger" onClick={handleLogout} style={{ marginLeft: '10px' }}>
                                         Logout
                                     </Button>
+                                    {/* ---------------------- */}
+                                    {/* Access to Profile Page */}
+                                    <Button variant="outline-success" onClick={handleProfile} style={{ marginLeft: '10px' }}>
+                                        {name}
+                                    </Button>
+                                    {/* ---------------------- */}
                                 </>
                             )}
                         </Nav>
@@ -313,7 +362,7 @@ const NavigationBar = ({ cartItemCount }) => {
                         />
                     </Form>
                 </Modal.Body>
-            </Modal >
+            </Modal>
         </>
     );
 };

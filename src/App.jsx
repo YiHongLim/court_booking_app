@@ -7,6 +7,7 @@ import CourtDetailsPage from "./pages/DetailsPage"
 import { Provider } from "react-redux"
 import { store } from "./app/store"
 import PaymentPage from "./components/PaymentPage"
+import ProfilePage from "./pages/ProfilePage"
 
 
 
@@ -23,6 +24,7 @@ function App() {
             <Route path="/" element={<CourtsPage />} />
             <Route path="/courts/:id" element={<CourtDetailsPage />} />
             <Route path="/payment" element={<PaymentPage />} />
+            <Route path="/profile/:id" element={<ProfilePage />} />
             <Route path="*" element={<CourtsPage />} />
           </Routes>
         </BrowserRouter>
