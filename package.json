@@ -33,6 +33,7 @@
     "express": "^4.19.2",
     "firebase": "^10.10.0",
     "lucide-react": "^0.371.0",
+    "nodemon": "^3.1.0",
     "pg": "^8.11.5",
     "react": "^18.2.0",
     "react-bootstrap": "^2.10.2",

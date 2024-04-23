@@ -12,7 +12,7 @@ export const fetchBookings = createAsyncThunk(
     async (firebaseUid, { rejectWithValue }) => {
         try {
             const response = await axios.get(`${BASE_URL}/users/${firebaseUid}/bookings`);
-            return response.data; // Assuming the response body contains an array of bookings
+            return response?.data; // Assuming the response body contains an array of bookings
         } catch (error) {
             return rejectWithValue('Failed to load bookings. Please try again later.');
         }

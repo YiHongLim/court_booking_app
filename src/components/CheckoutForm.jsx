@@ -6,7 +6,6 @@ import { CardElement, Elements, useStripe, useElements } from '@stripe/react-str
 
 const stripePromise = loadStripe(`${import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY}`);
 console.log(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-console.log(stripePromise)
 
 const CheckoutForm = () => {
     const stripe = useStripe();

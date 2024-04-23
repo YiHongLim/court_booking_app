@@ -2,11 +2,16 @@ import dotenv from 'dotenv';
 dotenv.config();
 import express, { json } from 'express';
 import cors from 'cors';
-// Import the entire package as a single module object
 import pkg from 'pg';
-// Destructure the required parts from the module object
+
 const { Pool } = pkg;
 
+import courts from './courts';
+app.use(courts())
+
+app.get("/court", (req, res) => {
+    res.send(courts);
+})
 const { DATABASE_URL } = process.env;
 
 const app = express();
@@ -22,6 +27,7 @@ const pool = new Pool({
 
 import Stripe from 'stripe';
 const stripe = new Stripe(import.meta.env.VITE_STRIPE_PRIVATE_KEY);
+
 console.log(import.meta.env.VITE_STRIPE_PRIVATE_KEY);
 
 // Endpoint to create a payment intent

@@ -31,7 +31,7 @@ const CourtsPage = () => {
             )
                 : (
                     <Row>
-                        {courts.map(court => (
+                        {courts?.map(court => (
                             <Col key={court.id} sm={12} md={6} lg={4}>
                                 <CourtCard court={court} />
                             </Col>

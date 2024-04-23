@@ -1,7 +1,7 @@
 // import { useNavigate } from 'react-router-dom';
 // import { Navbar, Nav, Container, Badge, Button } from 'react-bootstrap';
 // import { useContext, useState } from 'react';
-// import { AuthContext } from '../context/AuthContext';
+// import { AuthContext } from '../../context/AuthContext';
 // import AuthModal from './AuthModal';
 // import { logoutUser } from './AuthService';
 // // Import any other necessary components
@@ -83,13 +83,13 @@ import { useNavigate } from 'react-router-dom';
 import { Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
 import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 import { useContext, useState } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import { auth } from '../firebase';
-import PasswordResetModal from './PasswordResetModal';
+import { AuthContext } from '../../context/AuthContext';
+import { auth } from '../../firebase';
+import PasswordResetModal from '../PasswordResetModal';
 import GoogleButton from 'react-google-button';
 
 
-const NavigationBar = ({ cartItemCount }) => {
+const NavBar = ({ cartItemCount }) => {
     const navigate = useNavigate();
     const { currentUser } = useContext(AuthContext);
     // const [name, setName] = useState('');
@@ -155,24 +155,24 @@ const NavigationBar = ({ cartItemCount }) => {
     };
 
     // Utility function to convert Firebase error code to user-friendly message
-    const getFriendlyErrorMessage = (error) => {
-        switch (error.code) {
-            case 'auth/email-already-in-use':
-                return 'This email is already in use. Please use a different email.';
-            case 'auth/invalid-email':
-                return 'Invalid email address. Please check your email.';
-            case 'auth/weak-password':
-                return 'Password is too weak. Please use a stronger password.';
-            case 'auth/user-not-found':
-                return 'No user found with this email. Please sign up.';
-            case 'auth/wrong-password':
-                return 'Incorrect password. Please try again.';
-            case 'auth/missing-password':
-                return 'Please enter your password.';
-            default:
-                return 'An unexpected error occurred. Please try again.';
-        }
-    };
+    // const getFriendlyErrorMessage = (error) => {
+    //     switch (error.code) {
+    //         case 'auth/email-already-in-use':
+    //             return 'This email is already in use. Please use a different email.';
+    //         case 'auth/invalid-email':
+    //             return 'Invalid email address. Please check your email.';
+    //         case 'auth/weak-password':
+    //             return 'Password is too weak. Please use a stronger password.';
+    //         case 'auth/user-not-found':
+    //             return 'No user found with this email. Please sign up.';
+    //         case 'auth/wrong-password':
+    //             return 'Incorrect password. Please try again.';
+    //         case 'auth/missing-password':
+    //             return 'Please enter your password.';
+    //         default:
+    //             return 'An unexpected error occurred. Please try again.';
+    //     }
+    // };
 
     const storeUserInDatabase = async (userData) => {
         try {
@@ -219,8 +219,6 @@ const NavigationBar = ({ cartItemCount }) => {
             setError(friendlyMessage);
         }
     };
-
-
 
     const handleLogout = async () => {
         await signOut(auth);
@@ -318,4 +316,4 @@ const NavigationBar = ({ cartItemCount }) => {
     );
 };
 
-export default NavigationBar;
+export default NavBar;

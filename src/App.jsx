@@ -2,11 +2,11 @@ import { BrowserRouter, Route, Routes } from "react-router-dom"
 import BookingPage from "./pages/BookingPage"
 import { AuthProvider } from "./context/AuthContext"
 import CourtsPage from "./pages/CourtsPage"
-import NavigationBar from "./components/NavigationBar"
+import NavBar from "./components/NavAndAuth/NavBar"
 import CourtDetailsPage from "./pages/DetailsPage"
 import { Provider } from "react-redux"
 import { store } from "./app/store"
-import PaymentPage from "./components/PaymentPage"
+import PaymentPage from "./pages/PaymentPage"
 
 
 
@@ -17,7 +17,7 @@ function App() {
     <AuthProvider>
       <Provider store={store}>
         <BrowserRouter>
-          <NavigationBar cartItemCount={cartItemCount} />
+          <NavBar cartItemCount={cartItemCount} />
           <Routes>
             <Route path="/booking" element={<BookingPage />} />
             <Route path="/" element={<CourtsPage />} />
