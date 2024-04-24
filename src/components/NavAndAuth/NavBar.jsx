@@ -78,19 +78,20 @@
 
 
 
+import { useAuth } from '@/hooks/useAuth';
+import { auth } from '../../firebase';
+import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 
+import { useEffect, useState } from 'react';
+import GoogleButton from 'react-google-button';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Image, Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
-import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
-import { useContext, useEffect, useState } from 'react';
+
 import { AuthContext } from '../../context/AuthContext';
-import { login } from '../../features/users/activeUserSlice';
-import { auth } from '../../firebase';
-import PasswordResetModal from '../PasswordResetModal';
-import GoogleButton from 'react-google-button';
-import { useAuth } from '@/hooks/useAuth';
+import { storeUserInMemory, releaseUserInMemory } from '../../features/users/activeUserSlice';
 import { setUserInLocalStorage, getUserFromLocalStorage, clearUserFromLocalStorage } from '../../utils/storage';
-import { useDispatch, useSelector } from 'react-redux';
+import PasswordResetModal from '../PasswordResetModal';
 
 import defaultProfileImage from '../../assets/images/user-profile-default.webp';
 
@@ -99,16 +100,17 @@ const NavBar = () => {
     const dispatch = useDispatch();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [userId, setUserId] = useState(null);
     const [error, setError] = useState('');
 
-    const [name, setName] = useState('');
-    const [image, setImage] = useState(null);
-
-    const { currentUser, setCurrentUser } = useAuth();
+    const { currentUser } = useAuth();
 
     const cartItemCount = useSelector((state) => state.bookings.bookingTotalQuantity);
-    const cachedActiveUserObj = useSelector((state) => state.activeUser);
+
+    const activeUser = useSelector((state) => state.activeUser);
+    const [cachedUser, setCachedUser] = useState(activeUser);
+
+    // Debug
+    //console.log("[Nav Bar Component Re-render] Cached User.", cachedUser.current);
 
     const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -125,6 +127,7 @@ const NavBar = () => {
 
     const handleSignUp = async (e) => {
         e.preventDefault();
+
         setError("");
         try {
             const res = await createUserWithEmailAndPassword(
@@ -135,9 +138,11 @@ const NavBar = () => {
             );
 
             // Debug
-            console.log("[Registration] User.", res.user);
+            //console.log("[On Registration] User.", res.user);
 
             handleCloseModal();
+            handleStoreUserInDB(res.user);
+
             navigate("/"); // Navigate to a more appropriate route if needed
         } catch (error) {
             const friendlyMessage = getFriendlyErrorMessage(error);
@@ -147,27 +152,32 @@ const NavBar = () => {
     };
     const handleLogin = async (e) => {
         e.preventDefault();
+
         setError("");
         try {
             const res = await signInWithEmailAndPassword(auth, email, password);
 
-            console.log(res.user);
-            handleCloseModal();
+            // Debug
+            //console.log("[On Login] User.", res.user);
 
-            // After successful sign-up or login
-            const user = res.user; // The user object from Firebase
-            await storeUserInDatabase({
-                firebaseUid: user.uid,
-                name: "Dummy",
-                email: user.email,
-                // You can also pass displayName or photoURL if you have them
-            });
+            handleCloseModal();
+            handleStoreUserInDB(res.user); // The user object from Firebase
 
             navigate("/"); // Navigate to a more appropriate route if needed
         } catch (error) {
             const friendlyMessage = getFriendlyErrorMessage(error);
             setError(friendlyMessage);
         }
+    };
+
+    // After successful sign-up or login
+    const handleStoreUserInDB = async (user) => {
+        await storeUserInDatabase({
+            firebaseUid: user.uid,
+            name: "Dummy",
+            email: user.email,
+            // You can also pass displayName or photoURL if you have them
+        });
     };
 
     // Utility function to convert Firebase error code to user-friendly message
@@ -215,20 +225,18 @@ const NavBar = () => {
                 // Debug
                 //console.log("[On Login Successful] Response Result (User).", user);
 
-                setUserInLocalStorage({
+                // Note: We probably don't need the extra fields returned from DB.
+                // Since the query from 'index.js' is 'UPDATE users SET name = $2, email = $3 WHERE firebase_uid = $1 RETURNING *'
+                // 'RETURNING *' -> Return everything from the table row.
+                const userObj = {
                     id: user.id,
                     email: user.email,
                     name: user.name,
                     profile_picture_url: user.profile_picture_url
-                });
+                };
 
-                if (user) {
-                    setUserId(user.id);
-                    setName(user.name);
-                    setImage(user.profile_picture_url);
-
-                    dispatch(login(user.id));
-                }
+                dispatch(storeUserInMemory(userObj));
+                setUserInLocalStorage(userObj);
             }
         } catch (error) {
             console.error('Error storing user data:', error);
@@ -269,49 +277,30 @@ const NavBar = () => {
     const handleLogout = async () => {
         await signOut(auth);
         clearUserFromLocalStorage();
-
-        setUserId('');
-        setName('');
-        setImage(null);
+        dispatch(releaseUserInMemory());
 
         navigate("/");
     };
     // ==================================
     const handleProfile = () => {
-        if (userId)
-            navigate(`/profile/${userId}`);
-        else {
+        if (!cachedUser) {
             // Debug
-            console.error("Attempted to Move to Profile Page but User ID was not stored when user logged in.");
+            console.error("Attempted to Move to Profile Page but no user was found in memory (Possibly not cached?/Missing User ID).");
+            return;
         }
+        navigate(`/profile/${cachedUser.id}`);
     };
-
-    // If user is logged in (Via Email/Password Combination or Socials, use Display Name if available, otherwise Email)
+    // ==================================
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        let name = null;
-
-        if (storedUser) {
-            const userData = getUserFromLocalStorage();
-
-            // Debug
-            console.log("[On Page Startup] Cache Stored User.", userData);
-
-            setUserId(userData.id);
-            setImage(userData.profile_picture_url);
-
-            if (currentUser)
-                name = currentUser.displayName ? currentUser.displayName : userData.name;
-        }
-        else
-            name = currentUser.displayName ? currentUser.displayName : currentUser.email;
-
         // Debug
-        //console.log("[On Page Startup] Current User.", currentUser);
-        //console.log("[On Page Startup] Name.", name);
+        //console.log("[On Navigation Bar Startup] Cached User.", cachedUser);
 
-        setName(name);
-    }, [currentUser]);
+        if (!cachedUser || (cachedUser && !cachedUser.user)) {
+            // Debug
+            //console.log("[On Navigation Bar Startup] Load from Cache", getUserFromLocalStorage());
+            setCachedUser({ user: getUserFromLocalStorage() });
+        }
+    }, []); // We only want to run checks for at the beginning when the navigation bar is rendered.
     // ==================================
     return (
         <>
@@ -323,19 +312,9 @@ const NavBar = () => {
                         <Nav className="me-auto">
                             <Nav.Link onClick={() => navigate('/courts')}>Courts</Nav.Link>
                         </Nav>
-                        <Nav >
-                            {!currentUser && (
-                                <>
-                                    <Nav.Link onClick={handleOpenLoginModal}>
-                                        <Button variant="outline-primary">Log In</Button>
-                                    </Nav.Link>
-                                    <Nav.Link onClick={handleOpenSignUpModal}>
-                                        <Button variant="outline-secondary">Sign Up</Button>
-                                    </Nav.Link>
-                                </>
-                            )}
+                        <Nav>
                             {
-                                currentUser && (
+                                currentUser ? (
                                     <>
                                         <Button variant="outline-success" onClick={() => navigate('/booking')}>
                                             Cart <Badge bg="secondary">{cartItemCount}</Badge>
@@ -346,26 +325,49 @@ const NavBar = () => {
                                         </Button>
                                         {/* ---------------------- */}
                                         {/* Access to Profile Page */}
-                                        <div className="d-flex align-items-center">
-                                            <Image onClick={handleProfile} role="button" src={image ? image : defaultProfileImage}
-                                                style={{
-                                                    marginLeft: '30px',
-                                                    width: '100%', height: 'auto',
-                                                    minWidth: '24px', minHeight: '24px',
-                                                    maxWidth: '32px', maxHeight: '32px'
-                                                }} />
-                                            <Button onClick={handleProfile} variant="outline-success" onClick={handleProfile} style={{ marginLeft: '10px' }}>
-                                                {name}
-                                            </Button>
-                                        </div>
+                                        {
+                                            cachedUser && cachedUser.user ? (
+                                                <div className="d-flex align-items-center">
+                                                    <Image onClick={handleProfile} role="button"
+                                                        src={
+                                                            cachedUser.user.profile_picture_url ?
+                                                                cachedUser.profile_picture_url :
+                                                                defaultProfileImage
+                                                        }
+                                                        style={{
+                                                            marginLeft: '30px',
+                                                            width: '100%', height: 'auto',
+                                                            minWidth: '24px', minHeight: '24px',
+                                                            maxWidth: '32px', maxHeight: '32px'
+                                                        }} />
+                                                    <Button onClick={handleProfile} variant="outline-success"
+                                                        style={{ marginLeft: '10px' }}>
+                                                        {
+                                                            cachedUser.user.name ? cachedUser.user.name : (
+                                                                currentUser ? (currentUser.name ? currentUser.name : currentUser.email) : "N/A"
+                                                            )
+                                                        }
+                                                    </Button>
+                                                </div>
+                                            ) : null
+                                        }
                                         {/* ---------------------- */}
+                                    </>
+                                ) : (
+                                    <>
+                                        <Nav.Link onClick={handleOpenLoginModal}>
+                                            <Button variant="outline-primary">Log In</Button>
+                                        </Nav.Link>
+                                        <Nav.Link onClick={handleOpenSignUpModal}>
+                                            <Button variant="outline-secondary">Sign Up</Button>
+                                        </Nav.Link>
                                     </>
                                 )
                             }
                         </Nav>
                     </Navbar.Collapse>
                 </Container>
-            </Navbar >
+            </Navbar>
 
             <Modal show={showSignUpModal || showLoginModal} onHide={handleCloseModal}>
                 <Modal.Header closeButton>

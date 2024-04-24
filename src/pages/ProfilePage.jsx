@@ -1,6 +1,6 @@
 // =========================================
 import { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import Container from 'react-bootstrap/Container';
@@ -13,6 +13,8 @@ import Image from 'react-bootstrap/Image';
 
 import { getUserInfo, updateUserInfo } from '../features/users/activeUserSlice';
 import { setUserInLocalStorage, getUserFromLocalStorage } from '../utils/storage';
+
+import defaultProfileImage from '../assets/images/user-profile-default.webp';
 // =========================================
 export default function ProfilePage() {
     // ================
@@ -24,9 +26,11 @@ export default function ProfilePage() {
     // Debug
     //console.log("[Profile Page] User ID", userId);
     // ============
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
-    const [image, setImage] = useState(null);
+    const activeUser = useSelector((state) => state.activeUser);
+
+    const [name, setName] = useState(activeUser.user ? activeUser.user.name : "");
+    const [email, setEmail] = useState(activeUser.user ? activeUser.user.email : "");
+    const [image, setImage] = useState(activeUser.user ? activeUser.user.profile_picture_url : "");
     const [isCorrectImageFormat, setIsCorrectImageFormat] = useState(true);
 
     const [message, setMessage] = useState("");
@@ -69,41 +73,51 @@ export default function ProfilePage() {
     };
     // ============
     useEffect(() => {
+        // ===================================================
+        // 1. Present to users cached data first while we wait for updated data from server.
+        // If failed to acquire user from memory cache (Redux), acquire from local storage.
         // Debug
-        //console.log("Fetching User's Profile Info");
+        console.log("[On Profile Page Startup] Memory Cached User.", activeUser);
 
-        // First, we pre-load from cache.
-        const userData = getUserFromLocalStorage();
+        if (!activeUser || (activeUser && !activeUser.user)) {
+            const localStorageUser = getUserFromLocalStorage();
 
-        setName(userData.name);
-        setEmail(userData.email);
-        setImage(userData.profile_picture_url);
+            // Debug
+            console.log("[On Profile Page Startup] Load from Cache", localStorageUser);
 
-        // Then, we grab from server and update to latest information when completed.
+            setName(localStorageUser.name);
+            setEmail(localStorageUser.email);
+            setImage(localStorageUser.profile_picture_url);
+        }
+        // ===================================================
+        // 2. In the meantimewe grab from server and update to latest information when completed.
         dispatch(getUserInfo(userId))
             .unwrap()
             .then(
-                (data) => {
-                    // Debug
-                    //console.log("[Get User Info Successful] Payload.", data);
-
-                    setName(data.name);
-                    setEmail(data.email);
-                    setImage(data.profile_picture_url);
-
-                    setUserInLocalStorage({
+                (user) => {
+                    const serverLoadedUser = {
                         id: userId,
-                        email: data.email,
-                        name: data.name,
-                        profile_picture_url: data.profile_picture_url
-                    });
+                        email: user.email,
+                        name: user.name,
+                        profile_picture_url: user.profile_picture_url
+                    };
+
+                    // Debug
+                    console.log("[Get User Info Successful] Server Loaded User.", user);
+
+                    setName(user.name);
+                    setEmail(user.email);
+                    setImage(user.profile_picture_url);
+
+                    setUserInLocalStorage(serverLoadedUser);
                 }
             )
             .catch((error) => {
                 // Debug
                 //console.log("[Get User Info Failed] Error.", error ? error : "N/A");
             });
-    }, [dispatch, userId]);
+        // ===================================================
+    }, [dispatch, userId]); // We only want to run checks for at the beginning when the page is rendered.
     // ============
     useEffect(() => {
         if (image)
@@ -224,11 +238,11 @@ export default function ProfilePage() {
                             {
                                 image ? (
                                     <div className="d-flex align-items-center mb-3">
-                                        <Image src={image} className="me-3"
+                                        <Image src={image ? image : defaultProfileImage} className="me-3"
                                             style={{ minWidth: "96px", minHeight: "96px", maxWidth: "128px", maxHeight: "128px", width: "100%", height: "auto" }} />
-                                        <Image src={image} className="me-3"
+                                        <Image src={image ? image : defaultProfileImage} className="me-3"
                                             style={{ minWidth: "64px", minHeight: "64px", maxWidth: "96px", maxHeight: "96px", width: "100%", height: "auto" }} />
-                                        <Image src={image}
+                                        <Image src={image ? image : defaultProfileImage}
                                             style={{ minWidth: "32px", minHeight: "32x", maxWidth: "64px", maxHeight: "64px", width: "100%", height: "auto" }} />
                                     </div>
                                 ) : null

@@ -40,14 +40,23 @@ const activeUserSlice = createSlice({
     name: "activeUser",
     initialState: { user: null },
     reducers: {
-        login: (state, action) => {
+        storeUserInMemory: (state, action) => {
+            const newState = { user: { ...state.user } };
+            newState.user.id = action.payload;
+
             // Debug
-            //console.log("[On Login] Payload.", action.payload);
+            //console.log("[On Store New User] Payload.", action.payload);
+            //console.log("[On Store New User] New State.", newState);
 
-            const user = { ...state.user };
-            user.id = action.payload;
+            return newState;
+        },
+        releaseUserInMemory: () => {
+            const newState = { user: null };
 
-            return user;
+            // Debug
+            //console.log("[On Delete User in Memory] New State.", newState);
+
+            return newState;
         }
     },
     extraReducers: (builder) => {
@@ -83,5 +92,5 @@ const activeUserSlice = createSlice({
     }
 });
 
-export const { login } = activeUserSlice.actions;
+export const { storeUserInMemory, releaseUserInMemory } = activeUserSlice.actions;
 export default activeUserSlice.reducer;
