@@ -78,27 +78,39 @@
 
 
 
-
-import { useNavigate } from 'react-router-dom';
-import { Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
-import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
-import { useContext, useEffect, useState } from 'react';
-import { AuthContext } from '../../context/AuthContext';
-import { auth } from '../../firebase';
-import PasswordResetModal from '../PasswordResetModal';
-import GoogleButton from 'react-google-button';
 import { useAuth } from '@/hooks/useAuth';
+import { auth } from '../../firebase';
+import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
+
+import { useEffect, useState } from 'react';
+import GoogleButton from 'react-google-button';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { Image, Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
+
+import { AuthContext } from '../../context/AuthContext';
+import { storeUserInMemory, releaseUserInMemory } from '../../features/users/activeUserSlice';
 import { setUserInLocalStorage, getUserFromLocalStorage, clearUserFromLocalStorage } from '../../utils/storage';
-import { useSelector } from 'react-redux';
+import PasswordResetModal from '../PasswordResetModal';
+
+import defaultProfileImage from '../../assets/images/user-profile-default.webp';
 
 const NavBar = () => {
     const navigate = useNavigate();
-    // const [name, setName] = useState('');
+    const dispatch = useDispatch();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const { currentUser, setCurrentUser } = useAuth();
+
+    const { currentUser } = useAuth();
+
     const cartItemCount = useSelector((state) => state.bookings.bookingTotalQuantity);
+
+    const activeUser = useSelector((state) => state.activeUser);
+    const [cachedUser, setCachedUser] = useState(activeUser);
+
+    // Debug
+    //console.log("[Nav Bar Component Re-render] Cached User.", cachedUser);
 
     const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -115,6 +127,7 @@ const NavBar = () => {
 
     const handleSignUp = async (e) => {
         e.preventDefault();
+
         setError("");
         try {
             const res = await createUserWithEmailAndPassword(
@@ -123,9 +136,13 @@ const NavBar = () => {
                 email,
                 password
             );
-            setUserInLocalStorage({ uid: res.user.uid, email: res.user.email });
-            console.log(res.user);
+
+            // Debug
+            //console.log("[On Registration] User.", res.user);
+
             handleCloseModal();
+            handleStoreUserInDB(res.user);
+
             navigate("/"); // Navigate to a more appropriate route if needed
         } catch (error) {
             const friendlyMessage = getFriendlyErrorMessage(error);
@@ -135,29 +152,32 @@ const NavBar = () => {
     };
     const handleLogin = async (e) => {
         e.preventDefault();
+
         setError("");
         try {
             const res = await signInWithEmailAndPassword(auth, email, password);
-            setUserInLocalStorage({ uid: res.user.uid, email: res.user.email });
 
-            console.log(res.user);
+            // Debug
+            //console.log("[On Login] User.", res.user);
+
             handleCloseModal();
-
-            // After successful sign-up or login
-            const user = res.user; // The user object from Firebase
-            await storeUserInDatabase({
-                firebaseUid: user.uid,
-                name: "Dummy",
-                email: user.email,
-                // You can also pass displayName or photoURL if you have them
-            });
+            handleStoreUserInDB(res.user); // The user object from Firebase
 
             navigate("/"); // Navigate to a more appropriate route if needed
         } catch (error) {
             const friendlyMessage = getFriendlyErrorMessage(error);
             setError(friendlyMessage);
         }
+    };
 
+    // After successful sign-up or login
+    const handleStoreUserInDB = async (user) => {
+        await storeUserInDatabase({
+            firebaseUid: user.uid,
+            name: "Dummy",
+            email: user.email,
+            // You can also pass displayName or photoURL if you have them
+        });
     };
 
     // Utility function to convert Firebase error code to user-friendly message
@@ -190,11 +210,34 @@ const NavBar = () => {
                 body: JSON.stringify(userData),
             });
 
+            // Debug
+            //console.log("[On Login] Response.", response);
+
             if (!response.ok) {
                 // Handle the error
                 const errorText = await response.text();
                 console.error('Error storing user data:', errorText);
                 setError('There was a problem storing user data. Please try again.');
+            }
+            else {
+                const user = await response.json();
+
+                // Debug
+                //console.log("[On Login Successful] Response Result (User).", user);
+
+                // Note: We probably don't need the extra fields returned from DB.
+                // Since the query from 'index.js' is 'UPDATE users SET name = $2, email = $3 WHERE firebase_uid = $1 RETURNING *'
+                // 'RETURNING *' -> Return everything from the table row.
+                const userObj = {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    profile_picture_url: user.profile_picture_url
+                };
+
+                dispatch(storeUserInMemory(userObj));
+                setUserInLocalStorage(userObj);
+                setCachedUser(userObj);
             }
         } catch (error) {
             console.error('Error storing user data:', error);
@@ -235,19 +278,40 @@ const NavBar = () => {
     const handleLogout = async () => {
         await signOut(auth);
         clearUserFromLocalStorage();
+        dispatch(releaseUserInMemory());
+
         navigate("/");
     };
-
-    useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            const userData = getUserFromLocalStorage();
-            if (userData) {
-                setCurrentUser(userData);
-            }
+    // ==================================
+    const handleProfile = () => {
+        if (!cachedUser) {
+            // Debug
+            console.error("Attempted to Move to Profile Page but no user was found in memory + local storage. (Possibly not cached?/Missing User ID)");
+            return;
         }
-    }, [setCurrentUser]);
 
+        navigate(`/profile/${cachedUser.id}`);
+    };
+    // ==================================
+    useEffect(() => {
+        setCachedUser(activeUser);
+
+        // Debug
+        //console.log("[On Navigation Bar Startup] Load from Redux's State (In-Memory Caching).", activeUser);
+
+        if (!activeUser) {
+            const storedUser = getUserFromLocalStorage();
+
+            // Debug
+            //console.log("[On Navigation Bar Startup] Load from Local Storage (Browser Caching)", storedUser);
+
+            setCachedUser(storedUser);
+        }
+    },
+        // We only want to run checks for at the beginning when the navigation bar is rendered and whenever the redux's state is changed. Test
+        [activeUser]
+    );
+    // ==================================
     return (
         <>
             <Navbar bg="dark" expand="lg" data-bs-theme="dark">
@@ -258,32 +322,63 @@ const NavBar = () => {
                         <Nav className="me-auto">
                             <Nav.Link onClick={() => navigate('/courts')}>Courts</Nav.Link>
                         </Nav>
-                        <Nav >
-                            {!currentUser && (
-                                <>
-                                    <Nav.Link onClick={handleOpenLoginModal}>
-                                        <Button variant="outline-primary">Log In</Button>
-                                    </Nav.Link>
-                                    <Nav.Link onClick={handleOpenSignUpModal}>
-                                        <Button variant="outline-secondary">Sign Up</Button>
-                                    </Nav.Link>
-                                </>
-                            )}
-                            {currentUser && (
-                                <>
-                                    <Button variant="outline-success" onClick={() => navigate('/booking')}>
-                                        Cart <Badge bg="secondary">{cartItemCount}</Badge>
-                                        <span className="visually-hidden">booking items</span>
-                                    </Button>
-                                    <Button variant="outline-danger" onClick={handleLogout} style={{ marginLeft: '10px' }}>
-                                        Logout
-                                    </Button>
-                                </>
-                            )}
+                        <Nav>
+                            {
+                                currentUser ? (
+                                    <>
+                                        <Button variant="outline-success" onClick={() => navigate('/booking')}>
+                                            Cart <Badge bg="secondary">{cartItemCount}</Badge>
+                                            <span className="visually-hidden">booking items</span>
+                                        </Button>
+                                        <Button variant="outline-danger" onClick={handleLogout} style={{ marginLeft: '10px' }}>
+                                            Logout
+                                        </Button>
+                                        {/* ---------------------- */}
+                                        {/* Access to Profile Page */}
+                                        {
+                                            cachedUser ? (
+                                                <div className="d-flex align-items-center">
+                                                    <Image onClick={handleProfile} role="button"
+                                                        className="rounded-circle"
+                                                        src={
+                                                            cachedUser.profile_picture_url ?
+                                                                cachedUser.profile_picture_url :
+                                                                defaultProfileImage
+                                                        }
+                                                        style={{
+                                                            marginLeft: '30px',
+                                                            width: '100%', height: 'auto',
+                                                            minWidth: '24px', minHeight: '24px',
+                                                            maxWidth: '32px', maxHeight: '32px'
+                                                        }} />
+                                                    <Button onClick={handleProfile} variant="outline-success"
+                                                        style={{ marginLeft: '10px' }}>
+                                                        {
+                                                            cachedUser.name ? cachedUser.name : (
+                                                                currentUser ? (currentUser.name ? currentUser.name : currentUser.email) : "N/A"
+                                                            )
+                                                        }
+                                                    </Button>
+                                                </div>
+                                            ) : null
+                                        }
+                                        {/* ---------------------- */}
+                                    </>
+                                ) : (
+                                    <>
+                                        <Nav.Link onClick={handleOpenLoginModal}>
+                                            <Button variant="outline-primary">Log In</Button>
+                                        </Nav.Link>
+                                        <Nav.Link onClick={handleOpenSignUpModal}>
+                                            <Button variant="outline-secondary">Sign Up</Button>
+                                        </Nav.Link>
+                                    </>
+                                )
+                            }
                         </Nav>
                     </Navbar.Collapse>
                 </Container>
-            </Navbar >
+            </Navbar>
 
             <Modal show={showSignUpModal || showLoginModal} onHide={handleCloseModal}>
                 <Modal.Header closeButton>

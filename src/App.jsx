@@ -9,6 +9,11 @@ import { store } from "./app/store"
 import PaymentPage from "./pages/PaymentPage"
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+import ProfilePage from "./pages/ProfilePage"
+
+
+
 function App() {
 
 
@@ -22,6 +27,7 @@ function App() {
             <Route path="/" element={<CourtsPage />} />
             <Route path="/courts/:id" element={<CourtDetailsPage />} />
             <Route path="/payment" element={<PaymentPage />} />
+            <Route path="/profile/:id" element={<ProfilePage />} />
             <Route path="*" element={<CourtsPage />} />
           </Routes>
           <ToastContainer position="top-right" autoClose={5000} hideProgressBar newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
