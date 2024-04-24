@@ -31,8 +31,8 @@ const BookingPage = () => {
         dispatch(updateBooking({
             bookingId,
             firebaseUid: userId,
-            startTime: newStart,
-            endTime: newEnd,
+            startTime: newStart.toISOString(),
+            endTime: newEnd.toISOString(),
         }));
     };
 
@@ -57,7 +57,6 @@ const BookingPage = () => {
                             <Col key={booking.id} sm={12} md={6} lg={4}>
                                 <Card className="mb-4">
                                     <Card.Body>
-                                        {console.log(booking)}
                                         <Card.Title>{booking.court_name}</Card.Title>
                                         <Card.Text>
                                             Location: {booking.court_location}<br />

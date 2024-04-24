@@ -32,28 +32,6 @@ const BookingCard = ({ courtId }) => {
 
         dispatch(createBooking(bookingDetails))
             .unwrap()
-
-        // console.log(bookingDetails);
-        // const apiUrl = 'https://e7f5674d-1a2f-4c8a-9d46-3725ce9618a1-00-2tmgwv7t5ax7t.riker.replit.dev/bookings'; // Use your actual API URL
-
-        // try {
-        //     const response = await fetch(apiUrl, {
-        //         method: 'POST',
-        //         headers: {
-        //             'Content-Type': 'application/json',
-        //         },
-        //         body: JSON.stringify(bookingDetails),
-        //     });
-
-        //     if (!response.ok) {
-        //         throw new Error('Failed to create booking');
-        //     }
-
-        //     onBookingSuccess(); // Notify the parent component about the successful booking
-        // } catch (error) {
-        //     console.error('Booking error:', error);
-        //     alert("Failed to book the court. Please try again.");
-        // }
     };
 
     return (

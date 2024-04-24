@@ -39,11 +39,15 @@ export const updateBooking = createAsyncThunk(
     'bookings/updateBooking',
     async ({ bookingId, firebaseUid, startTime, endTime }, { rejectWithValue }) => {
         try {
+            // console.log(`${BASE_URL}/bookings/${bookingId}`)
+            console.log(bookingId, startTime, endTime)
             await axios.put(`${BASE_URL}/bookings/${bookingId}`, {
                 firebaseUid,
-                startTime: startTime.toISOString(),
-                endTime: endTime.toISOString(),
+                startTime: startTime,
+                endTime: endTime,
             });
+            // console.log(bookingId, startTime, endTime)
+
             return { bookingId, startTime, endTime }; // Return the updated booking info
         } catch (error) {
             return rejectWithValue('Failed to update the booking. Please try again.');
@@ -56,11 +60,10 @@ export const deleteBooking = createAsyncThunk(
     'bookings/deleteBooking',
     async (bookingId, { rejectWithValue }) => {
         try {
-            console.log(bookingId)
-            await axios.delete(`${BASE_URL}/${bookingId}`);
-            console.log("run")
+            console.log(`${BASE_URL}/bookings/${bookingId}`)
+            await axios.delete(`${BASE_URL}/bookings/${bookingId}`);
+            return bookingId;
 
-            return bookingId; // Return the id of the deleted booking
         } catch (error) {
             return rejectWithValue('Failed to delete the booking. Please try again.');
         }
@@ -109,14 +112,24 @@ const bookingsSlice = createSlice({
                 state.error = action.payload;
             })
             .addCase(updateBooking.fulfilled, (state, action) => {
+                state.status = 'succeeded'
                 const { bookingId, startTime, endTime } = action.payload;
                 const index = state.bookingItems.findIndex(booking => booking.id === bookingId);
                 if (index !== -1) {
-                    state.bookingItems[index] = { ...state.bookingItems[index], start_time: startTime, end_time: endTime };
+                    // Convert Date objects to strings before storing them in state
+                    state.bookingItems[index] = {
+                        ...state.bookingItems[index],
+                        start_time: startTime,
+                        end_time: endTime
+                    };
                 }
             })
             .addCase(deleteBooking.fulfilled, (state, action) => {
+                state.status = 'succeeded'
                 state.bookingItems = state.bookingItems.filter(booking => booking.id !== action.payload);
+                if (state.bookingTotalQuantity >= 1) {
+                    state.bookingTotalQuantity -= 1;
+                }
             })
             .addCase(updateBooking.pending, (state) => {
                 state.status = 'loading';
@@ -132,7 +145,6 @@ const bookingsSlice = createSlice({
                 state.status = 'failed';
                 state.error = action.payload;
             });
-        // Additional cases for updateBooking.pending, updateBooking.rejected, etc., can be added similarly
     },
 });
 
