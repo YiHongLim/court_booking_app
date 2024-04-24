@@ -28,9 +28,12 @@ export default function ProfilePage() {
     // ============
     const activeUser = useSelector((state) => state.activeUser);
 
-    const [name, setName] = useState(activeUser.user ? activeUser.user.name : "");
-    const [email, setEmail] = useState(activeUser.user ? activeUser.user.email : "");
-    const [image, setImage] = useState(activeUser.user ? activeUser.user.profile_picture_url : "");
+    // Debug
+    //console.log("[Profile Page] Active User", activeUser);
+
+    const [name, setName] = useState(activeUser ? activeUser.name : "");
+    const [email, setEmail] = useState(activeUser ? activeUser.email : "");
+    const [image, setImage] = useState(activeUser ? activeUser.profile_picture_url : null);
     const [isCorrectImageFormat, setIsCorrectImageFormat] = useState(true);
 
     const [message, setMessage] = useState("");
@@ -77,17 +80,19 @@ export default function ProfilePage() {
         // 1. Present to users cached data first while we wait for updated data from server.
         // If failed to acquire user from memory cache (Redux), acquire from local storage.
         // Debug
-        console.log("[On Profile Page Startup] Memory Cached User.", activeUser);
+        //console.log("[On Profile Page Startup] Memory Cached User.", activeUser);
 
         if (!activeUser || (activeUser && !activeUser.user)) {
             const localStorageUser = getUserFromLocalStorage();
 
             // Debug
-            console.log("[On Profile Page Startup] Load from Cache", localStorageUser);
+            //console.log("[On Profile Page Startup] Load from Cache", localStorageUser);
 
-            setName(localStorageUser.name);
-            setEmail(localStorageUser.email);
-            setImage(localStorageUser.profile_picture_url);
+            if (localStorageUser) {
+                setName(localStorageUser.name);
+                setEmail(localStorageUser.email);
+                setImage(localStorageUser.profile_picture_url);
+            }
         }
         // ===================================================
         // 2. In the meantimewe grab from server and update to latest information when completed.
@@ -103,7 +108,7 @@ export default function ProfilePage() {
                     };
 
                     // Debug
-                    console.log("[Get User Info Successful] Server Loaded User.", user);
+                    //console.log("[Get User Info Successful] Server Loaded User.", user);
 
                     setName(user.name);
                     setEmail(user.email);
@@ -235,18 +240,14 @@ export default function ProfilePage() {
                             </div>
 
                             {/* Image Preview */}
-                            {
-                                image ? (
-                                    <div className="d-flex align-items-center mb-3">
-                                        <Image src={image ? image : defaultProfileImage} className="me-3"
-                                            style={{ minWidth: "96px", minHeight: "96px", maxWidth: "128px", maxHeight: "128px", width: "100%", height: "auto" }} />
-                                        <Image src={image ? image : defaultProfileImage} className="me-3"
-                                            style={{ minWidth: "64px", minHeight: "64px", maxWidth: "96px", maxHeight: "96px", width: "100%", height: "auto" }} />
-                                        <Image src={image ? image : defaultProfileImage}
-                                            style={{ minWidth: "32px", minHeight: "32x", maxWidth: "64px", maxHeight: "64px", width: "100%", height: "auto" }} />
-                                    </div>
-                                ) : null
-                            }
+                            <div className="d-flex align-items-center mb-3">
+                                <Image src={image ? image : defaultProfileImage} className="me-3"
+                                    style={{ minWidth: "96px", minHeight: "96px", maxWidth: "128px", maxHeight: "128px", width: "100%", height: "auto" }} />
+                                <Image src={image ? image : defaultProfileImage} className="me-3"
+                                    style={{ minWidth: "64px", minHeight: "64px", maxWidth: "96px", maxHeight: "96px", width: "100%", height: "auto" }} />
+                                <Image src={image ? image : defaultProfileImage}
+                                    style={{ minWidth: "32px", minHeight: "32x", maxWidth: "64px", maxHeight: "64px", width: "100%", height: "auto" }} />
+                            </div>
 
                             {/* Image Format */}
                             {

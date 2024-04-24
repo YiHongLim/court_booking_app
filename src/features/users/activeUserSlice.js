@@ -38,25 +38,18 @@ export const updateUserInfo = createAsyncThunk(
 // Slice
 const activeUserSlice = createSlice({
     name: "activeUser",
-    initialState: { user: null },
+    initialState: null,
     reducers: {
         storeUserInMemory: (state, action) => {
-            const newState = { user: { ...state.user } };
-            newState.user.id = action.payload;
+            const user = { ...action.payload };
 
             // Debug
             //console.log("[On Store New User] Payload.", action.payload);
-            //console.log("[On Store New User] New State.", newState);
 
-            return newState;
+            return user;
         },
         releaseUserInMemory: () => {
-            const newState = { user: null };
-
-            // Debug
-            //console.log("[On Delete User in Memory] New State.", newState);
-
-            return newState;
+            return null;
         }
     },
     extraReducers: (builder) => {
@@ -68,7 +61,8 @@ const activeUserSlice = createSlice({
             const user = {
                 id: action.payload.id,
                 name: action.payload.name,
-                email: action.payload.email
+                email: action.payload.email,
+                profile_picture_url: action.payload.profile_picture_url
             };
 
             return user;
@@ -79,15 +73,14 @@ const activeUserSlice = createSlice({
             // Debug
             console.log("[On Update User Profile] Payload.", action.payload);
 
-            /*
-            return {
-                user: {
-                    user_id: state.user.user_id,
-                    name: action.payload.client_data.user.name,
-                    profile_picture: action.payload.client_data.user.profile_picture
-                }
+            const user = {
+                id: action.payload.id,
+                name: action.payload.name,
+                email: action.payload.email,
+                profile_picture_url: action.payload.profile_picture_url
             };
-            */
+
+            return user;
         });
     }
 });

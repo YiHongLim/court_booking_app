@@ -110,7 +110,7 @@ const NavBar = () => {
     const [cachedUser, setCachedUser] = useState(activeUser);
 
     // Debug
-    //console.log("[Nav Bar Component Re-render] Cached User.", cachedUser.current);
+    //console.log("[Nav Bar Component Re-render] Cached User.", cachedUser);
 
     const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -237,6 +237,7 @@ const NavBar = () => {
 
                 dispatch(storeUserInMemory(userObj));
                 setUserInLocalStorage(userObj);
+                setCachedUser(userObj);
             }
         } catch (error) {
             console.error('Error storing user data:', error);
@@ -285,22 +286,31 @@ const NavBar = () => {
     const handleProfile = () => {
         if (!cachedUser) {
             // Debug
-            console.error("Attempted to Move to Profile Page but no user was found in memory (Possibly not cached?/Missing User ID).");
+            console.error("Attempted to Move to Profile Page but no user was found in memory + local storage. (Possibly not cached?/Missing User ID)");
             return;
         }
+
         navigate(`/profile/${cachedUser.id}`);
     };
     // ==================================
     useEffect(() => {
-        // Debug
-        //console.log("[On Navigation Bar Startup] Cached User.", cachedUser);
+        setCachedUser(activeUser);
 
-        if (!cachedUser || (cachedUser && !cachedUser.user)) {
+        // Debug
+        //console.log("[On Navigation Bar Startup] Load from Redux's State (In-Memory Caching).", activeUser);
+
+        if (!activeUser) {
+            const storedUser = getUserFromLocalStorage();
+
             // Debug
-            //console.log("[On Navigation Bar Startup] Load from Cache", getUserFromLocalStorage());
-            setCachedUser({ user: getUserFromLocalStorage() });
+            //console.log("[On Navigation Bar Startup] Load from Local Storage (Browser Caching)", storedUser);
+
+            setCachedUser(storedUser);
         }
-    }, []); // We only want to run checks for at the beginning when the navigation bar is rendered.
+    },
+        // We only want to run checks for at the beginning when the navigation bar is rendered and whenever the redux's state is changed. Test
+        [activeUser]
+    );
     // ==================================
     return (
         <>
@@ -326,11 +336,12 @@ const NavBar = () => {
                                         {/* ---------------------- */}
                                         {/* Access to Profile Page */}
                                         {
-                                            cachedUser && cachedUser.user ? (
+                                            cachedUser ? (
                                                 <div className="d-flex align-items-center">
                                                     <Image onClick={handleProfile} role="button"
+                                                        className="rounded-circle"
                                                         src={
-                                                            cachedUser.user.profile_picture_url ?
+                                                            cachedUser.profile_picture_url ?
                                                                 cachedUser.profile_picture_url :
                                                                 defaultProfileImage
                                                         }
@@ -343,7 +354,7 @@ const NavBar = () => {
                                                     <Button onClick={handleProfile} variant="outline-success"
                                                         style={{ marginLeft: '10px' }}>
                                                         {
-                                                            cachedUser.user.name ? cachedUser.user.name : (
+                                                            cachedUser.name ? cachedUser.name : (
                                                                 currentUser ? (currentUser.name ? currentUser.name : currentUser.email) : "N/A"
                                                             )
                                                         }
