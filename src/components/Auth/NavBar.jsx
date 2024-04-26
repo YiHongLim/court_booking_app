@@ -1,83 +1,3 @@
-// import { useNavigate } from 'react-router-dom';
-// import { Navbar, Nav, Container, Badge, Button } from 'react-bootstrap';
-// import { useContext, useState } from 'react';
-// import { AuthContext } from '../../context/AuthContext';
-// import AuthModal from './AuthModal';
-// import { logoutUser } from './AuthService';
-// // Import any other necessary components
-
-// const NavigationBar = ({ cartItemCount }) => {
-//     const navigate = useNavigate();
-//     const { currentUser } = useContext(AuthContext);
-//     const [showAuthModal, setShowAuthModal] = useState(false);
-//     const [isSignUp, setIsSignUp] = useState(true); // To toggle between sign up and login in the modal
-
-//     // Other state and functions related to navigation bar display
-
-//     const handleAuthModalClose = () => {
-//         setShowAuthModal(false);
-//     };
-
-//     const handleOpenSignUpModal = () => {
-//         setIsSignUp(true);
-//         setShowAuthModal(true);
-//     };
-
-//     const handleOpenLoginModal = () => {
-//         setIsSignUp(false);
-//         setShowAuthModal(true);
-//     };
-
-//     return (
-//         <>
-//             <Navbar bg="dark" expand="lg" data-bs-theme="dark">
-//                 <Container>
-//                     <Navbar.Brand href="/">Court Booking</Navbar.Brand>
-//                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
-//                     <Navbar.Collapse id="basic-navbar-nav">
-//                         <Nav className="me-auto">
-//                             <Nav.Link onClick={() => navigate('/courts')}>Courts</Nav.Link>
-//                         </Nav>
-//                         <Nav >
-//                             {!currentUser && (
-//                                 <>
-//                                     <Nav.Link onClick={handleOpenLoginModal}>
-//                                         <Button variant="outline-primary">Log In</Button>
-//                                     </Nav.Link>
-//                                     <Nav.Link onClick={handleOpenSignUpModal}>
-//                                         <Button variant="outline-secondary">Sign Up</Button>
-//                                     </Nav.Link>
-//                                 </>
-//                             )}
-//                             {currentUser && (
-//                                 <>
-//                                     <Button variant="outline-success" onClick={() => navigate('/booking')}>
-//                                         Cart <Badge bg="secondary">{cartItemCount}</Badge>
-//                                         <span className="visually-hidden">booking items</span>
-//                                     </Button>
-//                                     <Button variant="outline-danger" onClick={logoutUser} style={{ marginLeft: '10px' }}>
-//                                         Logout
-//                                     </Button>
-//                                 </>
-//                             )}
-//                         </Nav>
-//                     </Navbar.Collapse>
-//                 </Container>
-//             </Navbar >
-
-//             <AuthModal
-//                 showSignUp={isSignUp}
-//                 showLogin={!isSignUp}
-//                 handleClose={handleAuthModalClose}
-//             />
-//         </>
-//     );
-// };
-
-// export default NavigationBar;
-
-
-
 import { useAuth } from '@/hooks/useAuth';
 import { auth } from '../../firebase';
 import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
@@ -103,7 +23,7 @@ const NavBar = () => {
     const [error, setError] = useState('');
 
     const { currentUser } = useAuth();
-
+    console.log(currentUser)
     const cartItemCount = useSelector((state) => state.bookings.bookingTotalQuantity);
 
     const activeUser = useSelector((state) => state.activeUser);
@@ -155,7 +75,11 @@ const NavBar = () => {
 
         setError("");
         try {
+            console.log("Current user:", currentUser);
+
             const res = await signInWithEmailAndPassword(auth, email, password);
+
+            console.log("Current user:", currentUser);
 
             // Debug
             //console.log("[On Login] User.", res.user);
