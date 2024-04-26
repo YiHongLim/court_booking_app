@@ -1,17 +1,36 @@
-// // components/NavBar.js
 // import { useNavigate } from 'react-router-dom';
-// import { Navbar, Nav, Container, Button } from 'react-bootstrap';
+// import { Navbar, Nav, Container, Badge, Button } from 'react-bootstrap';
+// import { useContext, useState } from 'react';
+// import { AuthContext } from '../../context/AuthContext';
 // import AuthModal from './AuthModal';
-// import { useState } from 'react';
+// import { logoutUser } from './AuthService';
+// // Import any other necessary components
 
-// const NavBar = () => {
+// const NavigationBar = ({ cartItemCount }) => {
 //     const navigate = useNavigate();
-//     const [showSignUpModal, setShowSignUpModal] = useState(false);
-//     const [showLoginModal, setShowLoginModal] = useState(false);
+//     const { currentUser } = useContext(AuthContext);
+//     const [showAuthModal, setShowAuthModal] = useState(false);
+//     const [isSignUp, setIsSignUp] = useState(true); // To toggle between sign up and login in the modal
+
+//     // Other state and functions related to navigation bar display
+
+//     const handleAuthModalClose = () => {
+//         setShowAuthModal(false);
+//     };
+
+//     const handleOpenSignUpModal = () => {
+//         setIsSignUp(true);
+//         setShowAuthModal(true);
+//     };
+
+//     const handleOpenLoginModal = () => {
+//         setIsSignUp(false);
+//         setShowAuthModal(true);
+//     };
 
 //     return (
 //         <>
-//             <Navbar bg="dark" expand="lg">
+//             <Navbar bg="dark" expand="lg" data-bs-theme="dark">
 //                 <Container>
 //                     <Navbar.Brand href="/">Court Booking</Navbar.Brand>
 //                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
@@ -19,21 +38,44 @@
 //                         <Nav className="me-auto">
 //                             <Nav.Link onClick={() => navigate('/courts')}>Courts</Nav.Link>
 //                         </Nav>
-//                         <Nav>
-//                             <Button variant="outline-primary" onClick={() => setShowLoginModal(true)}>Log In</Button>
-//                             <Button variant="outline-secondary" onClick={() => setShowSignUpModal(true)}>Sign Up</Button>
+//                         <Nav >
+//                             {!currentUser && (
+//                                 <>
+//                                     <Nav.Link onClick={handleOpenLoginModal}>
+//                                         <Button variant="outline-primary">Log In</Button>
+//                                     </Nav.Link>
+//                                     <Nav.Link onClick={handleOpenSignUpModal}>
+//                                         <Button variant="outline-secondary">Sign Up</Button>
+//                                     </Nav.Link>
+//                                 </>
+//                             )}
+//                             {currentUser && (
+//                                 <>
+//                                     <Button variant="outline-success" onClick={() => navigate('/booking')}>
+//                                         Cart <Badge bg="secondary">{cartItemCount}</Badge>
+//                                         <span className="visually-hidden">booking items</span>
+//                                     </Button>
+//                                     <Button variant="outline-danger" onClick={logoutUser} style={{ marginLeft: '10px' }}>
+//                                         Logout
+//                                     </Button>
+//                                 </>
+//                             )}
 //                         </Nav>
 //                     </Navbar.Collapse>
 //                 </Container>
-//             </Navbar>
+//             </Navbar >
 
-//             <AuthModal show={showSignUpModal} handleClose={() => setShowSignUpModal(false)} isSignUp={true} />
-//             <AuthModal show={showLoginModal} handleClose={() => setShowLoginModal(false)} isSignUp={false} />
+//             <AuthModal
+//                 showSignUp={isSignUp}
+//                 showLogin={!isSignUp}
+//                 handleClose={handleAuthModalClose}
+//             />
 //         </>
 //     );
 // };
 
-// export default NavBar;
+// export default NavigationBar;
+
 
 
 import { useAuth } from '@/hooks/useAuth';
@@ -47,8 +89,8 @@ import { useNavigate } from 'react-router-dom';
 import { Image, Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
 
 import { AuthContext } from '../context/AuthContext';
-import { storeUserInMemory, releaseUserInMemory } from '../features/users/activeUserSlice';
-import { setUserInLocalStorage, getUserFromLocalStorage, clearUserFromLocalStorage } from '../utils/storage';
+import { storeUserInMemory, releaseUserInMemory } from '../../features/users/activeUserSlice';
+import { setUserInLocalStorage, getUserFromLocalStorage, clearUserFromLocalStorage } from '../../utils/storage';
 import PasswordResetModal from './PasswordResetModal';
 
 import defaultProfileImage from '../assets/images/user-profile-default.webp';
@@ -269,7 +311,6 @@ const NavBar = () => {
         // We only want to run checks for at the beginning when the navigation bar is rendered and whenever the redux's state is changed. Test
         [activeUser]
     );
-    console.log(currentUser);
     // ==================================
     return (
         <>
@@ -348,6 +389,19 @@ const NavBar = () => {
                         className="d-grid gap-2 px-5"
                         onSubmit={showSignUpModal ? handleSignUp : handleLogin}
                     >
+                        {/* {showSignUpModal && (
+                            <>
+                                <Form.Group className="mb-3" controlId='name'>
+                                    <Form.Label>Name</Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder='Enter name'
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                    ></Form.Control>
+                                </Form.Group>
+                            </>
+                        )} */}
                         <Form.Group className="mb-3" controlId='formBasicEmail'>
                             <Form.Label>Email address</Form.Label>
                             <Form.Control
