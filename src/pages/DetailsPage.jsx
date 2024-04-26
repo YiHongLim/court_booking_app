@@ -51,13 +51,12 @@ const CourtDetailsPage = () => {
     if (error) return <div>Error: {error}</div>;
 
     return (
-        <Container className="mt-4">
-            <Row>
-                <Col xs={12} md={8}>
-                    <h2>{court?.name}</h2>
-                    <p>{court?.description}</p>
+        <Container className="mt-4 mb-5">
+            <Row className="mt-3 mb-3">
+                <Col xs={12} md={8} className="mb-3">
+
                     {images.length > 0 ? (
-                        <Carousel>
+                        <Carousel className="mb-4">
                             {images.map((imageUrl, index) => (
                                 <Carousel.Item key={index}>
                                     <img
@@ -79,12 +78,14 @@ const CourtDetailsPage = () => {
                     ) : (
                         <p>No images available.</p>
                     )}
+                    <h2>{court?.name}</h2>
+                    <p>{court?.description}</p>
                 </Col>
                 <Col xs={12} md={4}>
                     <BookingCard courtId={id} />
                 </Col>
             </Row>
-            <Row className="mt-3">
+            <Row className="mt-3 mb-3">
                 <Col>
                     <CourtImageManager courtId={id} fetchImages={fetchImages} />
                 </Col>

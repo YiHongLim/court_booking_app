@@ -45,10 +45,10 @@ const CourtCard = ({ court }) => {
             <Card.Body className="d-flex flex-column justify-content-between ">
                 <Card.Title>{court.name}</Card.Title>
                 <Card.Text>
-                    Location: {court.location}
+                    <i className="bi bi-geo-alt-fill"></i> {court.location}
                 </Card.Text>
                 <Card.Text>
-                    Price: {court.price}
+                    Hourly rate: ${court.price}
                 </Card.Text>
                 <Button variant="primary" onClick={handleViewDetails} aria-label={`View details about ${court.name}`}>View Details</Button>
             </Card.Body>

@@ -6,7 +6,6 @@ import NavBar from "./components/NavAndAuth/NavBar"
 import CourtDetailsPage from "./pages/DetailsPage"
 import { Provider } from "react-redux"
 import { store } from "./app/store"
-import PaymentPage from "./components/PayButton"
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
