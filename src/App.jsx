@@ -6,16 +6,16 @@ import NavBar from "./components/NavBar"
 import CourtDetailsPage from "./pages/DetailsPage"
 import { Provider } from "react-redux"
 import { store } from "./app/store"
-import PaymentPage from "./components/PayButton"
+import PaymentPage from "./pages/PaymentPage"
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import ProfilePage from "./pages/ProfilePage"
-import CheckoutSuccess from "./components/CheckoutSuccess"
-import CheckoutCancel from "./components/CheckoutCancel"
+
 
 
 function App() {
+
 
   return (
     <AuthProvider>
@@ -26,8 +26,7 @@ function App() {
             <Route path="/booking" element={<BookingPage />} />
             <Route path="/" element={<CourtsPage />} />
             <Route path="/courts/:id" element={<CourtDetailsPage />} />
-            <Route path="/checkout-success" element={<CheckoutSuccess />} />
-            <Route path="/checkout-cancel" element={<CheckoutCancel />} />
+            <Route path="/payment" element={<PaymentPage />} />
             <Route path="/profile/:id" element={<ProfilePage />} />
             <Route path="*" element={<CourtsPage />} />
           </Routes>
