@@ -70,6 +70,18 @@ export const deleteBooking = createAsyncThunk(
     }
 );
 
+export const clearBookings = createAsyncThunk(
+    'bookings/clearBookings',
+    async (firebaseUid, { rejectWithValue }) => {
+        try {
+            const response = await axios.delete(`${BASE_URL}/users/${firebaseUid}/bookings`);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue('Failed to clear bookings');
+        }
+    }
+);
+
 // Initial state for the bookings slice
 const initialState = {
     bookingItems: [],
@@ -92,6 +104,8 @@ const bookingsSlice = createSlice({
             .addCase(fetchBookings.fulfilled, (state, action) => {
                 state.status = 'succeeded';
                 state.bookingItems = action.payload;
+                state.bookingTotalQuantity = action.payload.length;
+                state.bookingTotalAmount = action.payload.reduce((total, booking) => total + booking.price, 0);
             })
             .addCase(fetchBookings.rejected, (state, action) => {
                 state.status = 'failed';
@@ -105,6 +119,7 @@ const bookingsSlice = createSlice({
                 // Add the new booking to the bookingItems array
                 state.bookingItems.push(action.payload);
                 state.bookingTotalQuantity += 1;
+                state.bookingTotalAmount += action.payload.price * (action.payload.quantity || 1);
 
             })
             .addCase(createBooking.rejected, (state, action) => {
@@ -116,20 +131,23 @@ const bookingsSlice = createSlice({
                 const { bookingId, startTime, endTime } = action.payload;
                 const index = state.bookingItems.findIndex(booking => booking.id === bookingId);
                 if (index !== -1) {
-                    // Convert Date objects to strings before storing them in state
+                    state.bookingTotalAmount -= state.bookingItems[index].price;
                     state.bookingItems[index] = {
                         ...state.bookingItems[index],
                         start_time: startTime,
                         end_time: endTime
                     };
+                    state.bookingTotalAmount += action.payload.price;
                 }
             })
             .addCase(deleteBooking.fulfilled, (state, action) => {
-                state.status = 'succeeded'
-                state.bookingItems = state.bookingItems.filter(booking => booking.id !== action.payload);
-                if (state.bookingTotalQuantity >= 1) {
-                    state.bookingTotalQuantity -= 1;
+                state.status = 'succeeded';
+                const index = state.bookingItems.findIndex(booking => booking.id === action.payload);
+                if (index !== -1) {
+                    state.bookingTotalAmount -= state.bookingItems[index].price;
                 }
+                state.bookingItems = state.bookingItems.filter(booking => booking.id !== action.payload);
+                state.bookingTotalQuantity -= 1;
             })
             .addCase(updateBooking.pending, (state) => {
                 state.status = 'loading';
@@ -144,6 +162,19 @@ const bookingsSlice = createSlice({
             .addCase(deleteBooking.rejected, (state, action) => {
                 state.status = 'failed';
                 state.error = action.payload;
+            })
+            .addCase(clearBookings.fulfilled, (state) => {
+                state.status = 'succeeded';
+                state.bookingItems = []; // Clears all bookings
+                state.bookingTotalQuantity = 0;
+                state.bookingTotalAmount = 0;
+            })
+            .addCase(clearBookings.pending, (state) => {
+                state.status = 'loading';
+            })
+            .addCase(clearBookings.rejected, (state, action) => {
+                state.error = action.payload;
+                state.status = 'failed';
             });
     },
 });

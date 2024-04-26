@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import EditBookingModal from '../components/EditBookingModal';
 import { useDispatch, useSelector } from 'react-redux';
 import { deleteBooking, fetchBookings, updateBooking } from '../features/courts/bookingSlice';
+import PayButton from '../components/PayButton';
 
 const BookingPage = () => {
     const { currentUser } = useAuth();
@@ -41,6 +42,8 @@ const BookingPage = () => {
         dispatch(deleteBooking(bookingId));
     };
 
+    const subtotal = bookings.reduce((total, booking) => total + booking.court_price, 0);
+
     return (
         <Container>
             <h1 className="my-4">Your Bookings</h1>
@@ -61,7 +64,8 @@ const BookingPage = () => {
                                         <Card.Text>
                                             Location: {booking.court_location}<br />
                                             Start Time: {format(new Date(booking.start_time), 'PPPpp')}<br />
-                                            End Time: {format(new Date(booking.end_time), 'PPPpp')}
+                                            End Time: {format(new Date(booking.end_time), 'PPPpp')} <br />
+                                            Price: ${booking.court_price}
                                         </Card.Text>
                                         <Button variant="outline-primary" onClick={() => handleEdit(booking)}>Edit</Button>
                                         <Button variant="outline-danger" onClick={() => handleDeleteBooking(booking.id)} style={{ marginLeft: '10px' }}>Delete</Button>
@@ -78,6 +82,14 @@ const BookingPage = () => {
                         />
                     )}
                 </Row>
+            )}
+            {bookings.length > 0 && (
+                <>
+                    <h4 className="text-right mt-3">Subtotal: ${subtotal.toFixed(2)}</h4>
+                    <div className="d-flex justify-content-end">
+                        <PayButton />
+                    </div>
+                </>
             )}
         </Container>
     );

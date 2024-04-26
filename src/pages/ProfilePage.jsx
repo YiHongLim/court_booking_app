@@ -65,7 +65,7 @@ export default function ProfilePage() {
                 // Debug
                 //console.log("[On Profile Picture Upload] Width: " + width + ", Height: " + height);
 
-                const isValid = file.size <= 128000;
+                const isValid = file.size <= 256000;
                 setIsCorrectImageFormat(isValid);
 
                 if (isValid)
@@ -242,7 +242,7 @@ export default function ProfilePage() {
                             {/* Image Preview */}
                             <div className="d-flex align-items-center mb-3">
                                 <Image src={image ? image : defaultProfileImage} className="me-3"
-                                    style={{ minWidth: "96px", minHeight: "96px", maxWidth: "128px", maxHeight: "128px", width: "100%", height: "auto" }} />
+                                    style={{ minWidth: "96px", minHeight: "96px", maxWidth: "256px", maxHeight: "256px", width: "100%", height: "auto" }} />
                                 <Image src={image ? image : defaultProfileImage} className="me-3"
                                     style={{ minWidth: "64px", minHeight: "64px", maxWidth: "96px", maxHeight: "96px", width: "100%", height: "auto" }} />
                                 <Image src={image ? image : defaultProfileImage}
@@ -263,7 +263,7 @@ export default function ProfilePage() {
                             {/* Image Conditions */}
                             <div className="d-flex flex-column rounded mb-4 px-2">
                                 <Form.Text className="text-non-links-primary login-text fw-bold">Requirements for profile picture setup: </Form.Text>
-                                <Form.Text className="text-non-links-primary login-text">1. Must not exceed 128kb. </Form.Text>
+                                <Form.Text className="text-non-links-primary login-text">1. Must not exceed 256kb. </Form.Text>
                             </div>
                             {/* -------------------------------------- */}
                             <div className="d-flex justify-content-center w-100">

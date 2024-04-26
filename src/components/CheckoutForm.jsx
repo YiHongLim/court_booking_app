@@ -1,75 +1,58 @@
-import { useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
-import { CardElement, Elements, useStripe, useElements } from '@stripe/react-stripe-js';
+// import React from 'react';
+// import { loadStripe } from '@stripe/stripe-js';
+// import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-// Load your publishable key from the environment variable or configuration
+// // Load the Stripe script with your publishable key
+// const stripePromise = loadStripe('your_stripe_public_key');
 
-const stripePromise = loadStripe(`${import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY}`);
+// const CheckoutForm = ({ amount }) => {
+//     const stripe = useStripe();
+//     const elements = useElements();
 
-const CheckoutForm = () => {
-    const stripe = useStripe();
-    const elements = useElements();
-    const [error, setError] = useState(null);
+//     const handleSubmit = async (event) => {
+//         event.preventDefault();
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
+//         if (!stripe || !elements) {
+//             // Stripe.js has not loaded yet. Make sure to disable form submission until Stripe.js has loaded.
+//             return;
+//         }
 
-        if (!stripe || !elements) {
-            // Stripe.js has not yet loaded or there's some other error.
-            return;
-        }
+//         // Call your backend to create the Checkout session
+//         const { sessionId } = await fetch('/create-checkout-session', {
+//             method: 'POST',
+//             headers: {
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify({ amount }),
+//         }).then(res => res.json());
 
-        const cardElement = elements.getElement(CardElement);
+//         // When the customer clicks on the button, redirect them to Checkout
+//         const result = await stripe.redirectToCheckout({
+//             sessionId,
+//         });
 
-        const { error, paymentMethod } = await stripe.createPaymentMethod({
-            type: 'card',
-            card: cardElement,
-        });
+//         if (result.error) {
+//             // If `redirectToCheckout` fails due to a browser or network error, display the localized error message to your customer.
+//             alert(result.error.message);
+//         }
+//     };
 
-        if (error) {
-            setError(error.message);
-            console.error('Error:', error);
-        } else {
-            // Send the paymentMethod.id to your server (e.g., via POST request)
-            const response = await fetch('/create-payment-intent', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ paymentMethodId: paymentMethod.id }),
-            });
-            const paymentIntentResponse = await response.json();
+//     return (
+//         <form onSubmit={handleSubmit}>
+//             <CardElement />
+//             <button type="submit" disabled={!stripe}>
+//                 Pay {amount}
+//             </button>
+//         </form>
+//     );
+// };
 
-            // TODO: Handle the response from the server (e.g., payment confirmation or error)
-            if (paymentIntentResponse.error) {
-                // Payment failed: inform the user and try again
-                setError(paymentIntentResponse.error);
-            } else {
-                // Payment succeeded: clear the error and proceed
-                setError(null);
-                // Update the UI or redirect the user
-                alert('Payment successful!');
-                // For example, redirect to a success page or reset the cart
-                // window.location.href = '/success';
-            }
-        }
-    };
+// const PaymentButton = ({ amount }) => {
+//     return (
+//         <Elements stripe={stripePromise}>
+//             <CheckoutForm amount={amount} />
+//         </Elements>
+//     );
+// };
 
-    return (
-        <form onSubmit={handleSubmit}>
-            <CardElement />
-            <button type="submit" disabled={!stripe}>
-                Pay
-            </button>
-            {error && <div className="error">{error}</div>}
-        </form>
-    );
-};
-
-const StripeWrapper = () => {
-    return (
-        <Elements stripe={stripePromise}>
-            <CheckoutForm />
-        </Elements>
-    );
-};
-
-export default StripeWrapper;
+// export default PaymentButton;
