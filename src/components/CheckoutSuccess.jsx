@@ -1,23 +1,32 @@
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { clearBookings } from '../features/courts/bookingSlice';
-import { useAuth } from '@/hooks/useAuth';
+import axios from 'axios';
+import useAuthState from '@/hooks/useAuthState';
 
 const CheckoutSuccess = () => {
     const dispatch = useDispatch();
-    const { currentUser } = useAuth();
+    const { currentUser } = useAuthState();
     const userId = currentUser?.uid;
-    console.log(userId)
 
     useEffect(() => {
-        dispatch(clearBookings(userId));
+        const BASE_URL = import.meta.env.VITE_API_URL;
+        if (userId) {
+            axios.put('/bookings/mark-paid', { userId })
+            .then(() => {
+                dispatch(clearBookings());
+            })
+            .catch((error) => {
+                console.error('Error marking bookings as paid:', error);
+            })
+        }
+        
     }, [dispatch, userId]);
 
     return (
         <div>
             <h1>Payment Successful!</h1>
             <p>Thank you for your payment. Your transaction has been completed.</p>
-            {/* Include any other relevant information or links */}
         </div>
     );
 };

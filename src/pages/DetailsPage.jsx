@@ -14,7 +14,6 @@ const CourtDetailsPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const BASE_URL = import.meta.env.VITE_API_URL;
-    console.log(BASE_URL)
     useEffect(() => {
         fetchCourtDetails();
         fetchImages();
@@ -80,6 +79,8 @@ const CourtDetailsPage = () => {
                     )}
                     <h2>{court?.name}</h2>
                     <p>{court?.description}</p>
+                    <h4>Hourly rate: ${court.price}</h4>
+
                 </Col>
                 <Col xs={12} md={4}>
                     <BookingCard courtId={id} />

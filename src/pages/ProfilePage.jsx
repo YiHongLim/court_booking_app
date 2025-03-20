@@ -29,7 +29,7 @@ export default function ProfilePage() {
     const activeUser = useSelector((state) => state.activeUser);
 
     // Debug
-    //console.log("[Profile Page] Active User", activeUser);
+    // console.log("[Profile Page] Active User", activeUser);
 
     const [name, setName] = useState(activeUser ? activeUser.name : "");
     const [email, setEmail] = useState(activeUser ? activeUser.email : "");
@@ -170,7 +170,7 @@ export default function ProfilePage() {
             })
             .catch((error) => {
                 // Debug
-                //console.log("[On Update User Profile Failed] Payload.", error);
+                console.log("[On Update User Profile Failed] Payload.", error);
 
                 setMessage("Something went wrong with the profile update process.");
                 setIsError(true);

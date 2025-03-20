@@ -6,30 +6,52 @@ import pkg from 'pg';
 
 const { Pool } = pkg;
 
-import courts from './courts';
-app.use(courts())
-
-app.get("/court", (req, res) => {
-    res.send(courts);
-})
-const { DATABASE_URL } = process.env;
+// const { DATABASE_URL } = process.env.DATABASE_URL;
 
 const app = express();
 app.use(cors());
 app.use(json());
 
 const pool = new Pool({
-    connectionString: DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false,
-    },
+    connectionString: process.env.DATABASE_URL,
 });
 
 import Stripe from 'stripe';
-const stripe = new Stripe(import.meta.env.VITE_STRIPE_PRIVATE_KEY);
+const stripe = new Stripe(process.env.STRIPE_PRIVATE_KEY);
 
-console.log(import.meta.env.VITE_STRIPE_PRIVATE_KEY);
-
+app.post('/create-checkout-session', async (req, res) => {
+    try {
+      const { bookings } = req.body;
+      
+      // Format line items for Stripe
+      const lineItems = bookings.map(booking => ({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Booking for ${booking.court_name}`,
+            description: `${new Date(booking.start_time).toLocaleString()} to ${new Date(booking.end_time).toLocaleString()}`,
+          },
+          unit_amount: Math.round(booking.court_price * 100), // Convert to cents
+        },
+        quantity: 1,
+      }));
+  
+      // Create Checkout Session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: lineItems,
+        mode: 'payment',
+        success_url: `${process.env.CLIENT_URL}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.CLIENT_URL}/booking`,
+      });
+      console.log(process.env.CLIENT_URL)
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
 // Endpoint to create a payment intent
 app.post('/create-payment-intent', async (req, res) => {
     try {
@@ -103,7 +125,7 @@ app.post('/users', async (req, res) => {
 app.get('/users/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
-        const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
+        const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
         if (result.rows.length > 0) {
             res.json(result.rows[0]);
         } else {
@@ -118,11 +140,11 @@ app.get('/users/:userId', async (req, res) => {
 // update user profile
 app.put('/users/:userId', async (req, res) => {
     const { userId } = req.params;
-    const { username, email, profile_picture_url } = req.body;
+    const { name, email, profile_picture_url } = req.body;
     try {
         const result = await pool.query(
-            'UPDATE users SET username = $1, email = $2,  profile_picture_url = $3 WHERE user_id = $4 RETURNING *',
-            [username, email, profile_picture_url, userId]
+            'UPDATE users SET name = $1, email = $2,  profile_picture_url = $3 WHERE id = $4 RETURNING *',
+            [name, email, profile_picture_url, userId]
         );
         res.json(result.rows[0]);
     } catch (error) {
@@ -248,9 +270,65 @@ app.delete('/courts/:id', async (req, res) => {
     }
 });
 
+const checkAvailability = async (req, res, next) => {
+    const { courtId, startTime, endTime } = req.body;
+
+    try {
+        const overlappingBookings = await pool.query(
+            `SELECT * FROM bookings
+            WHERE court_id = $1
+            AND ((start_time <= $2 AND end_time > $2)
+            OR (start_time < $3 AND end_time >= $3)
+            OR (start_time >= $2 AND end_time <= $3))`,
+            [courtId, startTime, endTime]
+        );
+
+        if (overlappingBookings.rows.length > 0) {
+            return res.status(409).json({
+                error: "Court is already booked for this time slot"
+            });
+        }
+
+        next();
+    } catch (error) {
+        console.error('Availability check error:', error);
+        res.status(500).json({ error: "Failed to check availability"});
+    }
+}
+
+const calculatePrice = async (req, res, next) => {
+    const { courtId, startTime, endTime } = req.body;
+
+    try {
+        const courtResult = await pool.query(
+            'SELECT price FROM courts WHERE id = $1',  [courtId]
+        );
+
+        if (courtResult.rows.length === 0) {
+            return res.status(404).json({ error: "Court not found" });
+        }
+
+        const court = courtResult.rows[0];
+        const start = new Date(startTime)
+        const end = new Date(endTime);
+
+        const durationHours = (end - start) / (1000 * 60 * 60);
+        console.log("Duration hours:", durationHours);
+
+        let price = court.price * durationHours;
+        
+        req.calculatePrice = parseFloat(price.toFixed(2));
+        next();
+    } catch (error) {
+        console.error('Price calculation error:', error);
+        res.status(500).json({ error: "Failed to calculate price" });
+    }
+}
+
 // add bookings
-app.post('/bookings', async (req, res) => {
+app.post('/bookings', checkAvailability, calculatePrice, async (req, res) => {
     const { courtId, firebaseUid, startTime, endTime } = req.body;
+    const amount = req.calculatePrice;
 
     try {
         // Resolve the Firebase UID to an internal user ID
@@ -262,8 +340,8 @@ app.post('/bookings', async (req, res) => {
 
         // Insert the booking with the internal user ID
         const bookingResult = await pool.query(
-            'INSERT INTO bookings (court_id, user_id, start_time, end_time) VALUES ($1, $2, $3, $4) RETURNING *',
-            [courtId, userId, startTime, endTime]
+            'INSERT INTO bookings (court_id, user_id, start_time, end_time, amount) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [courtId, userId, startTime, endTime, amount]
         );
         res.json(bookingResult.rows[0]);
     } catch (error) {
@@ -286,7 +364,7 @@ app.get('/users/:firebaseUid/bookings', async (req, res) => {
         console.log(userId);
         // Then, retrieve all bookings for that user ID
         const bookingsRes = await pool.query(`
-      SELECT b.*, c.name as court_name, c.location as court_location
+      SELECT b.*, c.name as court_name, c.location as court_location, c.price as court_price
       FROM bookings b
       INNER JOIN courts c ON b.court_id = c.id
       WHERE b.user_id = $1
@@ -298,6 +376,78 @@ app.get('/users/:firebaseUid/bookings', async (req, res) => {
         res.status(500).send('Failed to retrieve bookings');
     }
 });
+
+app.get('/users/:firebaseUid/bookings/pending', async (req, res) => {
+    try {
+        const { firebaseUid } = req.params;
+        
+        const userRes = await pool.query('SELECT id FROM users WHERE firebase_uid = $1', [firebaseUid]);
+        if (userRes.rows.length === 0) {
+            return res.status(404).json({ error: "User not found"});
+        }
+
+        const userId = userRes.rows[0].id;
+
+        const unpaidBookings = await pool.query(
+            `SELECT b.*, c.name as court_name, c.location as court_location 
+            FROM bookings b
+            JOIN courts c on b.court_id = c.id
+            WHERE b.user_id = $1 AND b.status='pending'
+            ORDER BY b.start_time DESC`,
+            [userId]
+        );
+        res.json(unpaidBookings.rows);
+    } catch (error) {
+        console.error('Error fetching cart items:', error);
+        res.status(500).json({ error: "Failed to fetch cart items"});
+    }
+})
+app.get('/bookings/paid/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const userRes = await pool.query('SELECT id FROM users WHERE firebase_uid = $1', [userId]);
+        if (userRes.rows.length === 0) {
+            return res.status(404).json({ error: "User not found"});
+        }
+        const user_id = userRes.rows[0].id;
+
+        const paidBookings = await pool.query(
+            `SELECT b.*, c.name as court_name, c.location as court_location 
+            FROM bookings b
+            JOIN courts c on b.court_id = c.id
+            WHERE b.user_id = $1 AND b.status = 'paid'
+            ORDER BY b.start_time DESC`, 
+            [user_id]
+        );
+        res.json(paidBookings.rows);
+    } catch (error) {
+        console.error('Error fetching paid bookings:', error);
+        res.status(500).json({ error: "Failed to fetch paid bookings" });
+    }
+})
+
+app.put('/bookings/mark-paid', async (req, res) => {
+    try {
+        const { userId } = req.body;
+
+        const userRes = await pool.query('SELECT id FROM users WHERE firebase_uid = $1', [userId]);
+        if (userRes.rows.length === 0) {
+            return res.status(404).json({ error: "User not found"});
+        }
+
+        const user_id = userRes.rows[0].id;
+
+        await pool.query(
+            `UPDATE bookings SET status = 'paid' WHERE user_id = $1 AND status = 'pending'`, [user_id]
+         );
+
+         res.json({ success: true });
+    } catch (error) { 
+        console.error('Error marking bookings as paid:', error);
+        res.status(500).json({ error: "Failed to update booking status"});
+    }
+})
 
 // update booking
 app.put('/bookings/:bookingId', async (req, res) => {
@@ -311,19 +461,19 @@ app.put('/bookings/:bookingId', async (req, res) => {
         }
         const userId = userRes.rows[0].id;
 
-        console.log(bookingId);
-        console.log(userId)
-
         // Then proceed to check if the user has a booking with this ID
         const updateRes = await pool.query(
             'UPDATE bookings SET start_time = $1, end_time = $2 WHERE id = $3 AND user_id = $4 RETURNING *',
             [startTime, endTime, bookingId, userId]
         );
+        console.log('Update query result:', updateRes.rows);
 
         if (updateRes.rowCount === 0) {
             // No booking was updated, could mean it doesn't exist or the user isn't authorized to update it
             return res.status(404).json({ error: "Booking not found or not authorized" });
         }
+        res.json(updateRes.rows[0]); // Send updated booking back to client
+
     } catch (error) {
         console.error('Error updating booking:', error.message);
         res.status(500).send('Failed to update booking');
@@ -430,7 +580,8 @@ app.get('/', (req, res) => {
 });
 
 // Adjust the app.listen to bind to the port and host as required by Render
-const port = process.env.PORT || 3000; // Use the PORT environment variable provided by Render or default to 3000
+const port = 3000; // Use the PORT environment variable provided by Render or default to 3000
 app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on port ${port}`);
+    console.log(`Server accessible at http://localhost:${port} or your local IP address`);
 });

@@ -1,21 +1,25 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Alert, Spinner } from 'react-bootstrap';
-import { useAuth } from '../hooks/useAuth';
+import useAuthState from '@/hooks/useAuthState';
 import { format } from 'date-fns';
 import EditBookingModal from '../components/EditBookingModal';
 import { useDispatch, useSelector } from 'react-redux';
 import { deleteBooking, fetchBookings, updateBooking } from '../features/courts/bookingSlice';
+import PayButton from '../components/PayButton';
 
-const BookingPage = () => {
-    const { currentUser } = useAuth();
+const CartPage = () => {
+    const { currentUser } = useAuthState();
     const userId = currentUser?.uid;
     const dispatch = useDispatch();
     const bookings = useSelector((state) => state.bookings.bookingItems);
     const bookingStatus = useSelector((state) => state.bookings.status);
+    const cartItems = useSelector((state) => state.bookings.cartItems);
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
-    const [error, setError] = useState('');
+    const [error, setError] = useState(null);
 
+    console.log(cartItems)
+    console.log(bookings)
     useEffect(() => {
         if (userId) {
             dispatch(fetchBookings(userId))
@@ -35,15 +39,17 @@ const BookingPage = () => {
             endTime: newEnd.toISOString(),
         }));
     };
-
+ 
     const handleDeleteBooking = async (bookingId) => {
         if (!window.confirm('Are you sure you want to delete this booking?')) return;
         dispatch(deleteBooking(bookingId));
     };
 
+    const subtotal = bookings.reduce((total, booking) => total + booking.court_price, 0);
+
     return (
         <Container>
-            <h1 className="my-4">Your Bookings</h1>
+            <h1 className="my-4">Your Cart</h1>
             {error && <Alert variant="danger">{error}</Alert>}
             {bookingStatus === "failed" && <Alert variant='danger'>Failed to load bookings.</Alert>}
             {bookingStatus === "loading" ? (
@@ -52,8 +58,9 @@ const BookingPage = () => {
                 </div>
             ) : (
                 <Row>
-                    {bookings.length > 0 ?
-                        bookings.map((booking) => (
+                    {bookings.length > 0 ? (
+                        <>
+                        {bookings.map((booking) => (
                             <Col key={booking.id} sm={12} md={6} lg={4}>
                                 <Card className="mb-4">
                                     <Card.Body>
@@ -61,14 +68,27 @@ const BookingPage = () => {
                                         <Card.Text>
                                             Location: {booking.court_location}<br />
                                             Start Time: {format(new Date(booking.start_time), 'PPPpp')}<br />
-                                            End Time: {format(new Date(booking.end_time), 'PPPpp')}
+                                            End Time: {format(new Date(booking.end_time), 'PPPpp')}<br />
+                                            Price: ${booking.amount}
                                         </Card.Text>
                                         <Button variant="outline-primary" onClick={() => handleEdit(booking)}>Edit</Button>
                                         <Button variant="outline-danger" onClick={() => handleDeleteBooking(booking.id)} style={{ marginLeft: '10px' }}>Delete</Button>
                                     </Card.Body>
                                 </Card>
                             </Col>
-                        )) : bookingStatus === 'succeeded' && <p>Your bookings are currently empty.</p>}
+                            ))
+                        }
+                        <Col sm={12}>
+                            <h4 className="text-right mt-3">Subtotal: ${subtotal.toFixed(2)}</h4>
+                            <div className="d-flex justify-content-end">
+                                <PayButton />
+                            </div>
+                        </Col>
+                            </>
+                    )
+                        : bookingStatus === 'succeeded' && <p>Your bookings are currently empty.</p>
+                    }
+                    
                     {selectedBooking && (
                         <EditBookingModal
                             show={showEditModal}
@@ -83,4 +103,4 @@ const BookingPage = () => {
     );
 };
 
-export default BookingPage;
+export default CartPage;

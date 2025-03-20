@@ -9,11 +9,11 @@ import { Button } from '@/components/ui/button';
 
 
 const CourtsPage = () => {
-    // const [courts, setCourts] = useState([]);
     const dispatch = useDispatch();
     const { data: courts, isLoading } = useSelector((state) => state.courts);
     const { currentUser } = useContext(AuthContext); // Use the Auth context to access the current user
     const navigate = useNavigate();
+    console.log('Courts data:', courts);
 
     useEffect(() => {
         dispatch(fetchCourts())

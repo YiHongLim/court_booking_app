@@ -43,9 +43,6 @@ const EditBookingModal = ({ show, onHide, booking, onUpdate }) => {
         </LocalizationProvider>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>
-          Close
-        </Button>
         <Button variant="primary" onClick={handleUpdateClick}>
           Update Booking
         </Button>

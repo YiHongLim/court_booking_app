@@ -1,37 +1,62 @@
 // BookingCard.jsx
 import { useState } from 'react';
 import { Card, Button, Form } from 'react-bootstrap';
-import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
+import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers';
+import { ToastContainer, toast } from 'react-toastify';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 import { TextField } from '@mui/material';
-import { useAuth } from '../hooks/useAuth'; // Adjust the import path as necessary
+import useAuthState  from '@/hooks/useAuthState'; // Adjust the import path as necessary
 import { useDispatch } from 'react-redux';
 import { createBooking } from '@/features/courts/bookingSlice';
 
 
 const BookingCard = ({ courtId }) => {
-    const { currentUser } = useAuth(); // Use the useAuth hook to access the current user
-    const [startDate, setStartDate] = useState(new Date());
-    const [endDate, setEndDate] = useState(new Date());
+    const { currentUser } = useAuthState(); 
+    const [startDateTime, setStartDateTime] = useState(new Date());
+    const [endDateTime, setEndDateTime] = useState(new Date());
+    const [error, setError] = useState(null);
     const dispatch = useDispatch();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         // Ensure we have a current user before proceeding
         if (!currentUser) {
-            alert("You must be logged in to book a court.");
+            toast.error("You must be logged in to book a court.", {
+                position: "top-center",
+                autoClose: 3000,
+                hideProgressBar: true,
+                closeOnClick: true,
+                pauseOnHover: true,
+            });
+            return;
+        }
+
+        if (endDateTime <= startDateTime) {
+            toast.error("End date and time must be after the start date and time.", {
+                position: "top-center",
+                autoClose: 3000,
+                hideProgressBar: true,
+                closeOnClick: true,
+                pauseOnHover: true,
+            });
             return;
         }
 
         const bookingDetails = {
             courtId,
             firebaseUid: currentUser?.uid, // Use the UID from the currentUser object
-            startTime: startDate.toISOString(), // Convert dates to ISO string for backend compatibility
-            endTime: endDate.toISOString(),
+            startTime: startDateTime.toISOString(), // Convert dates to ISO string for backend compatibility
+            endTime: endDateTime.toISOString(),
         };
 
         dispatch(createBooking(bookingDetails))
             .unwrap()
+            .then(() => {
+                toast.success("Booking successful!");
+            })
+            .catch((errorMessage) => { 
+                toast.error(errorMessage || "Failed to book the court. Please try again.");
+            });
     };
 
     return (
@@ -40,21 +65,21 @@ const BookingCard = ({ courtId }) => {
                 <Card.Title>Book This Court</Card.Title>
                 <LocalizationProvider dateAdapter={AdapterDateFns}>
                     <Form onSubmit={handleSubmit} className="my-4">
-                        <Form.Group controlId="startDate">
-                            <DatePicker
-                                label="Start Date"
+                        <Form.Group controlId="startDateTime">
+                            <DateTimePicker
+                                label="Start Date & Time"
                                 inputFormat="MM/dd/yyyy"
-                                value={startDate}
-                                onChange={setStartDate}
+                                value={startDateTime}
+                                onChange={setStartDateTime}
                                 renderInput={(params) => <TextField {...params} />}
                             />
                         </Form.Group>
-                        <Form.Group controlId="endDate">
-                            <DatePicker
-                                label="End Date"
+                        <Form.Group controlId="endDate ">
+                            <DateTimePicker
+                                label="End Date & Time"
                                 inputFormat="MM/dd/yyyy"
-                                value={endDate}
-                                onChange={setEndDate}
+                                value={endDateTime}
+                                onChange={setEndDateTime}
                                 renderInput={(params) => <TextField {...params} />}
                             />
                         </Form.Group>
@@ -64,6 +89,7 @@ const BookingCard = ({ courtId }) => {
                     </Form>
                 </LocalizationProvider>
             </Card.Body>
+            <ToastContainer />
         </Card>
     );
 };

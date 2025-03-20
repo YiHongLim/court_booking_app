@@ -1,86 +1,5 @@
-// import { useNavigate } from 'react-router-dom';
-// import { Navbar, Nav, Container, Badge, Button } from 'react-bootstrap';
-// import { useContext, useState } from 'react';
-// import { AuthContext } from '../../context/AuthContext';
-// import AuthModal from './AuthModal';
-// import { logoutUser } from './AuthService';
-// // Import any other necessary components
-
-// const NavigationBar = ({ cartItemCount }) => {
-//     const navigate = useNavigate();
-//     const { currentUser } = useContext(AuthContext);
-//     const [showAuthModal, setShowAuthModal] = useState(false);
-//     const [isSignUp, setIsSignUp] = useState(true); // To toggle between sign up and login in the modal
-
-//     // Other state and functions related to navigation bar display
-
-//     const handleAuthModalClose = () => {
-//         setShowAuthModal(false);
-//     };
-
-//     const handleOpenSignUpModal = () => {
-//         setIsSignUp(true);
-//         setShowAuthModal(true);
-//     };
-
-//     const handleOpenLoginModal = () => {
-//         setIsSignUp(false);
-//         setShowAuthModal(true);
-//     };
-
-//     return (
-//         <>
-//             <Navbar bg="dark" expand="lg" data-bs-theme="dark">
-//                 <Container>
-//                     <Navbar.Brand href="/">Court Booking</Navbar.Brand>
-//                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
-//                     <Navbar.Collapse id="basic-navbar-nav">
-//                         <Nav className="me-auto">
-//                             <Nav.Link onClick={() => navigate('/courts')}>Courts</Nav.Link>
-//                         </Nav>
-//                         <Nav >
-//                             {!currentUser && (
-//                                 <>
-//                                     <Nav.Link onClick={handleOpenLoginModal}>
-//                                         <Button variant="outline-primary">Log In</Button>
-//                                     </Nav.Link>
-//                                     <Nav.Link onClick={handleOpenSignUpModal}>
-//                                         <Button variant="outline-secondary">Sign Up</Button>
-//                                     </Nav.Link>
-//                                 </>
-//                             )}
-//                             {currentUser && (
-//                                 <>
-//                                     <Button variant="outline-success" onClick={() => navigate('/booking')}>
-//                                         Cart <Badge bg="secondary">{cartItemCount}</Badge>
-//                                         <span className="visually-hidden">booking items</span>
-//                                     </Button>
-//                                     <Button variant="outline-danger" onClick={logoutUser} style={{ marginLeft: '10px' }}>
-//                                         Logout
-//                                     </Button>
-//                                 </>
-//                             )}
-//                         </Nav>
-//                     </Navbar.Collapse>
-//                 </Container>
-//             </Navbar >
-
-//             <AuthModal
-//                 showSignUp={isSignUp}
-//                 showLogin={!isSignUp}
-//                 handleClose={handleAuthModalClose}
-//             />
-//         </>
-//     );
-// };
-
-// export default NavigationBar;
-
-
-
-import { useAuth } from '@/hooks/useAuth';
 import { auth } from '../firebase';
-import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
+import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 
 import { useEffect, useState } from 'react';
 import GoogleButton from 'react-google-button';
@@ -88,29 +7,32 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Image, Navbar, Nav, Container, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
 
-import { AuthContext } from '../context/AuthContext';
-import { storeUserInMemory, releaseUserInMemory } from '../../features/users/activeUserSlice';
-import { setUserInLocalStorage, getUserFromLocalStorage, clearUserFromLocalStorage } from '../../utils/storage';
-import PasswordResetModal from './PasswordResetModal';
+// import { AuthContext } from '../context/AuthContext';
+import { storeUserInMemory, releaseUserInMemory } from '../features/users/activeUserSlice';
+import { setUserInLocalStorage, getUserFromLocalStorage, clearUserFromLocalStorage } from '../utils/storage';
+// import PasswordResetModal from './PasswordResetModal';
+
+
 
 import defaultProfileImage from '../assets/images/user-profile-default.webp';
+import useAuthState from '@/hooks/useAuthState';
+import { useAuth } from '@/hooks/useAuth';
 
 const NavBar = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const { currentUser } = useAuth();
+    const { currentUser, loading } = useAuthState(); 
+    const { loginUser } = useAuth();
 
     const cartItemCount = useSelector((state) => state.bookings.bookingTotalQuantity);
 
     const activeUser = useSelector((state) => state.activeUser);
     const [cachedUser, setCachedUser] = useState(activeUser);
-
-    // Debug
-    //console.log("[Nav Bar Component Re-render] Cached User.", cachedUser);
 
     const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -152,18 +74,20 @@ const NavBar = () => {
     };
     const handleLogin = async (e) => {
         e.preventDefault();
-
         setError("");
+
         try {
-            const res = await signInWithEmailAndPassword(auth, email, password);
-
-            // Debug
-            //console.log("[On Login] User.", res.user);
-
+            const res = await loginUser(email, password);
+            if (!res) {
+                console.error("Login failed:", error); // Access error from useAuth
+                return;
+            }
+        
+            console.log("Redux active user:", activeUser);
+            console.log("Current User:", currentUser)
             handleCloseModal();
             handleStoreUserInDB(res.user); // The user object from Firebase
-
-            navigate("/"); // Navigate to a more appropriate route if needed
+            navigate("")
         } catch (error) {
             const friendlyMessage = getFriendlyErrorMessage(error);
             setError(friendlyMessage);
@@ -238,6 +162,7 @@ const NavBar = () => {
                 dispatch(storeUserInMemory(userObj));
                 setUserInLocalStorage(userObj);
                 setCachedUser(userObj);
+                console.log("Cached user:", cachedUser)
             }
         } catch (error) {
             console.error('Error storing user data:', error);
@@ -312,6 +237,9 @@ const NavBar = () => {
         [activeUser]
     );
     // ==================================
+    if (loading) {
+        return <p>Loading...</p>; // This return is inside the function
+    }
     return (
         <>
             <Navbar bg="dark" expand="lg" data-bs-theme="dark">
@@ -321,12 +249,13 @@ const NavBar = () => {
                     <Navbar.Collapse id="basic-navbar-nav">
                         <Nav className="me-auto">
                             <Nav.Link onClick={() => navigate('/courts')}>Courts</Nav.Link>
-                        </Nav>
+                        </Nav> 
                         <Nav>
                             {
                                 currentUser ? (
                                     <>
-                                        <Button variant="outline-success" onClick={() => navigate('/booking')}>
+                                        console.log(&quot;[On Login] User.&quot;, res.user);
+                                        <Button variant="outline-success" onClick={() => navigate('/cart')}>
                                             Cart <Badge bg="secondary">{cartItemCount}</Badge>
                                             <span className="visually-hidden">booking items</span>
                                         </Button>
@@ -389,7 +318,7 @@ const NavBar = () => {
                         className="d-grid gap-2 px-5"
                         onSubmit={showSignUpModal ? handleSignUp : handleLogin}
                     >
-                        {/* {showSignUpModal && (
+                        {showSignUpModal && (
                             <>
                                 <Form.Group className="mb-3" controlId='name'>
                                     <Form.Label>Name</Form.Label>
@@ -401,7 +330,7 @@ const NavBar = () => {
                                     ></Form.Control>
                                 </Form.Group>
                             </>
-                        )} */}
+                        )}
                         <Form.Group className="mb-3" controlId='formBasicEmail'>
                             <Form.Label>Email address</Form.Label>
                             <Form.Control

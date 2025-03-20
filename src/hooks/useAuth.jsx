@@ -21,7 +21,7 @@ export const useAuth = () => {
             const res = await signInWithEmailAndPassword(auth, email, password);
             return res;
         } catch (error) {
-            setError(error.message);
+            console.error("Login error:", error.message);
             return null;
         }
     };
